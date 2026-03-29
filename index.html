@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مصاريفي ومشاويري</title>
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS / Safari Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="مشاويري">
+    <link rel="apple-touch-icon" href="icon.png">
+    <!-- Google Fonts: Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icons: Boxicons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="style.css?v=11.0">
+    <link rel="stylesheet" href="animations.css">
+    <style>
+        #save-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            display: none;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        #save-indicator.show { display: block; animation: fadeInUp 0.4s ease; }
+    </style>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Mashawiri PWA: SW Registered.'))
+                    .catch(err => console.error('Mashawiri PWA: SW Registration failed.', err));
+            });
+        }
+        window.addEventListener('mashawiri-saved', () => {
+             const si = document.getElementById('save-indicator');
+             if(si) {
+                 si.classList.add('show');
+                 setTimeout(() => si.classList.remove('show'), 2000);
+             }
+        });
+    </script>
+</head>
+<body>
+    <div id="save-indicator"><i class='bx bx-check-shield'></i> تم الحفظ</div>
+    <div id="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class='bx bx-wallet-alt'></i>
+                <h1>محفظتي</h1>
+            </div>
+            <button class="settings-btn" id="settingsCogBtn" onclick="toggleSettingsDropdown(event)"><i class='bx bx-cog'></i></button>
+            <div class="dropdown-menu" id="settingsDropdown">
+                <button class="dropdown-item" onclick="switchView('view-projects'); closeSettingsDropdown()"><i class='bx bx-briefcase-alt-2'></i> إدارة المشروعات</button>
+                <button class="dropdown-item" onclick="switchView('view-repeated-trips'); closeSettingsDropdown()"><i class='bx bx-refresh'></i> تقرير المشاوير المتكررة</button>
+                <button class="dropdown-item" onclick="openModal('manageCategoriesModal'); closeSettingsDropdown()"><i class='bx bx-category'></i> إعدادات التصنيفات</button>
+                <button class="dropdown-item" onclick="openModal('manageLabelsModal'); closeSettingsDropdown()"><i class='bx bx-purchase-tag'></i> إعدادات ملصقاتي (Labels)</button>
+                <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+                <button class="dropdown-item" onclick="setMonthlyBudget(); closeSettingsDropdown()"><i class='bx bx-target-lock'></i> تحديد الميزانية الشهرية</button>
+                <button class="dropdown-item" onclick="openModal('exportOptionsModal'); closeSettingsDropdown()"><i class='bx bx-download'></i> تصدير البيانات (Excel/CSV)</button>
+                <button class="dropdown-item" onclick="document.getElementById('importFile').click(); closeSettingsDropdown()"><i class='bx bx-upload'></i> استيراد وتدقيق بيانات (رفع)</button>
+                <input type="file" id="importFile" style="display:none;" accept=".json,.csv,.xlsx" onchange="handleFileSelectForImport(event)">
+                <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+                <button class="dropdown-item" id="darkModeBtn" onclick="toggleTheme(); closeSettingsDropdown()"><i class='bx bx-moon'></i> الوضع الليلي</button>
+                <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+                <button class="dropdown-item" onclick="switchView('view-trash'); closeSettingsDropdown()"><i class='bx bx-trash'></i> سلة المحذوفات (Trash)</button>
+                <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+                <button class="dropdown-item" onclick="window.deleteTodayExpensesHandler(); closeSettingsDropdown()" style="color:#ef4444;"><i class='bx bx-trash-alt'></i> حذف مصروفات اليوم</button>
+                <button class="dropdown-item" onclick="window.factoryResetHandler(); closeSettingsDropdown()" style="color:#ef4444; font-weight:700;"><i class='bx bx-reset'></i> إعادة ضبط المصنع (حذف الكل)</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area (Views) -->
+        <main class="app-content">
+            
+            <!-- ====== VIEW: Dashboard ====== -->
+            <section id="view-dashboard" class="view active">
+                <div class="summary-card gold-gradient">
+                    <p class="summary-title" style="margin-bottom:4px;">إجمالي مصرفات اليوم</p>
+                    <h2 class="summary-amount" id="dash-today-total">0.00 <span class="currency">ج.م</span></h2>
+                    <p class="summary-secondary">الشهر الجاري: <span id="dash-month-total">0.00</span> ج.م</p>
+                    <div id="budget-progress-container" style="display:none; margin-top:12px;"></div>
+                </div>
+
+                <!-- Ongoing / Multi-day Trips (populated dynamically, hidden when empty) -->
+                <div id="ongoing-trips-container" style="display:none; margin-top:20px;"></div>
+
+                <!-- Automatic Today List -->
+                <div class="section-header" style="margin-top:24px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                    <h3 style="margin-bottom:0; color:var(--text-main); font-weight:800; font-size:16px;"><i class='bx bx-time-five'></i> مصروفات اليوم</h3>
+                </div>
+                <div class="transactions-list" id="today-transactions-list" style="margin-top:12px;"></div>
+
+                <!-- History Navigation Card at bottom -->
+                <div style="margin-top:32px; padding-bottom:20px;">
+                    <div class="action-card" onclick="switchView('view-history')" style="flex-direction:row; align-items:center; padding:16px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:16px;">
+                        <div class="ac-icon" style="background:#fef9c3; color:#854d0e; width:40px; height:40px; min-width:40px;"><i class='bx bx-history' style="font-size:20px;"></i></div>
+                        <div style="flex:1;">
+                            <span style="display:block; font-size:14px; font-weight:800;">سجل الأيام السابقة</span>
+                            <span style="display:block; font-size:11px; opacity:0.6;">مشاهدة المصاريف القديمة والمشاوير المؤرشفة</span>
+                        </div>
+                        <i class='bx bx-chevron-left' style="font-size:20px; color:#cbd5e1;"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== VIEW: HISTORY LIST ====== -->
+            <section id="view-history" class="view view-sliding">
+                 <header class="sub-header">
+                    <button class="back-btn" onclick="switchView('view-dashboard')"><i class='bx bx-arrow-right'></i></button>
+                    <h2>سجل الأيام السابقة</h2>
+                </header>
+                <div class="transactions-list" id="history-transactions-list"></div>
+            </section>
+
+            <!-- ====== VIEW: Projects (NEW STRICT RULE) ====== -->
+            <section id="view-projects" class="view">
+                <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>إدارة المشروعات والمشاوير</h2>
+                    <button class="text-btn" onclick="openModal('addProjectModal')"><i class='bx bx-plus'></i> مشروع جديد</button>
+                </div>
+                <div class="transactions-list" id="projects-list-container">
+                    <!-- Projects injected here by JS -->
+                     <div class="empty-state">
+                        <i class='bx bx-briefcase-alt-2'></i>
+                        <p>لا توجد مشروعات ممتدة</p>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ====== VIEW: Reports ====== -->
+            <section id="view-reports" class="view">
+                <div class="view-header u-flex-between" style="padding: 10px 4px 20px 4px; border-bottom:1px solid var(--border-color); margin-bottom:20px;">
+                    <h2 class="view-title" style="margin:0;"><i class='bx bx-chart'></i> التقارير والبيانات</h2>
+                    <div class="u-flex-center" style="gap:10px;">
+                        <button class="icon-btn-v2" onclick="window.exportData()" title="نسخة احتياطية"><i class='bx bx-download'></i></button>
+                        <button class="icon-btn-v2" onclick="document.getElementById('import-file').click()" title="استعادة"><i class='bx bx-upload'></i></button>
+                        <input type="file" id="import-file" style="display:none" onchange="window.importData(event)" accept=".json">
+                    </div>
+                </div>
+
+                <div class="report-toggle-pills" style="margin-bottom:20px;">
+                    <button id="btn-chart-view" class="pill-btn" onclick="window.toggleReportsView('chart')"><i class='bx bx-pie-chart-alt-2'></i> تحليل المصروفات</button>
+                    <button id="btn-list-view" class="pill-btn active" onclick="window.toggleReportsView('list')"><i class='bx bx-list-ul'></i> تقرير مفصل</button>
+                </div>
+
+                <div id="wrapper-chart-view" style="display:none;">
+                    <div class="card chart-container" style="background:var(--card-bg); padding:20px; border-radius:20px; border:1px solid var(--border-color);">
+                        <canvas id="monthlyChart" style="max-height:300px;"></canvas>
+                    </div>
+                </div>
+
+                <div id="wrapper-list-view" style="display:block;">
+                    <div id="report-content" class="report-content-area" style="margin-top: 16px;">
+                        <!-- Hierarchical Reports injected here by JS (Months > Weeks > Days) -->
+                    </div>
+                </div>
+
+                <div id="wrapper-chart-view" style="display:none;">
+                    <div class="summary-card cyan-gradient mb-4" id="chart-container" style="background:#ffffff; border:1px solid var(--border-color); color:var(--text-main);">
+                        <p class="summary-title" style="color:var(--text-main); margin-bottom:16px; font-weight:700;">تحليل مصاريف الشهر الجاري</p>
+                        <div style="position: relative; height: 200px; width: 100%;">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                        <div id="chart-table-container" style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px;"></div>
+                    </div>
+                </div>
+            </section>
+
+
+
+            <!-- ====== VIEW: Repeated Trips ====== -->
+            <section id="view-repeated-trips" class="view view-sliding">
+                <header class="sub-header">
+                    <button class="back-btn" onclick="switchView('view-dashboard')"><i class='bx bx-arrow-right'></i></button>
+                    <h2>المشاوير المتكررة</h2>
+                </header>
+
+                <div class="summary-card cyan-gradient mb-4" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                    <p class="summary-title" style="color:white; opacity:0.8;">تحليل المشاوير المتكررة ذكية (Labels)</p>
+                    <p style="font-size:14px; color:white; margin-top:8px;">يقوم التطبيق بجمع كل المشاوير التي تحمل نفس العلامة (Label) لتكوين مجموعات تحليلية مفيدة.</p>
+                </div>
+
+                <div id="repeated-trips-content" class="transactions-list">
+                    <!-- Repeated Trips injected here by JS -->
+                </div>
+            </section>
+
+            <!-- ====== VIEW: Filtered Category/Label ====== -->
+            <section id="view-filtered" class="view view-sliding">
+                <header class="sub-header">
+                    <button class="back-btn" onclick="window.resetSearch && window.resetSearch()"><i class='bx bx-arrow-right'></i></button>
+                    <h2 id="filtered-view-title">نتائج البحث</h2>
+                </header>
+
+                <div class="summary-card gold-gradient mb-4">
+                    <p class="summary-title" id="filter-summary-title">الإجمالي</p>
+                    <h2 class="summary-amount" id="filter-total">0.00 <span class="currency">ج.م</span></h2>
+                </div>
+
+                <div class="transactions-list" id="filtered-content">
+                    <!-- Filtered items injected here -->
+                </div>
+            </section>
+
+            <!-- ====== VIEW: Single Trip Details ====== -->
+            <section id="view-single-trip" class="view view-sliding">
+                <header class="sub-header">
+                    <button class="back-btn" onclick="closeSingleTrip()"><i class='bx bx-arrow-right'></i></button>
+                    <h2 id="single-trip-title">تفاصيل المشوار</h2>
+                </header>
+
+                <div class="summary-card blue-gradient mb-4">
+                    <p class="summary-title">إجمالي تكلفة المشوار</p>
+                    <h2 class="summary-amount" id="single-trip-total">0.00 <span class="currency">ج.م</span></h2>
+                    <p class="trip-date-display" id="single-trip-date">اليوم</p>
+                </div>
+
+                <div class="section-header">
+                    <h3>تفاصيل الصرف</h3>
+                    <button class="text-btn" onclick="openModal('addTripExpenseModal')">إضافة منصرف +</button>
+                </div>
+
+                <div class="transactions-list" id="trip-expenses-list">
+                    <!-- Trip internal expenses injected here -->
+                </div>
+            </section>
+
+            <!-- ====== VIEW: TRASH (RECYCLE BIN) ====== -->
+            <section id="view-trash" class="view view-sliding">
+                <header class="sub-header">
+                    <button class="back-btn" onclick="switchView('view-dashboard')"><i class='bx bx-arrow-right'></i></button>
+                    <h2>سلة المحذوفات</h2>
+                </header>
+
+                <div class="summary-card red-gradient mb-4" style="background: linear-gradient(135deg, #ef4444, #991b1b);">
+                    <p class="summary-title" style="color:white; opacity:0.8;">العناصر المحذوفة مؤقتاً</p>
+                    <p style="font-size:12px; color:white; margin-top:8px;">يمكنك استعادة العناصر أو حذفها نهائياً لتوفير مساحة.</p>
+                </div>
+
+                <div class="section-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                    <h3>المحذوفات</h3>
+                    <button class="text-btn" style="color:var(--danger); font-weight:800;" onclick="window.emptyTrashHandler()">تفريغ السلة 🗑️</button>
+                </div>
+
+                <div class="transactions-list" id="trash-list-container" style="margin-top: 12px;">
+                    <!-- Trashed items injected here by JS -->
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" style="flex: 1;" data-target="dashboard">
+                <i class='bx bxs-dashboard'></i>
+                <span>الرئيسية</span>
+            </button>
+            
+            <!-- Quick Actions Container (Trip & Expense) -->
+            <div class="quick-actions-nav" style="flex: 1.5; justify-content: center;">
+                <button class="qa-btn qa-trip" id="btn-quick-trip">
+                    <i class='bx bx-run'></i> <span>مشوار</span>
+                </button>
+                <button class="qa-btn qa-expense" id="btn-quick-expense">
+                    <i class='bx bx-cart'></i> <span>مصروف</span>
+                </button>
+            </div>
+
+            <!-- Manage Categories / Reports Button -->
+            <button class="nav-item" style="flex: 1;" data-target="reports">
+                <i class='bx bx-pie-chart-alt-2'></i>
+                <span>التقارير</span>
+            </button>
+        </nav>
+    <!-- ====== MODALS ====== -->
+
+    <!-- Modals Datalist for Labels -->
+    <datalist id="all-labels-datalist"></datalist>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeAllModals()"></div>
+
+    <!-- Modal: Add Node (Unified Expense) -->
+    <div class="bottom-sheet" id="addNodeModal">
+        <div class="sheet-header">
+            <h3 id="addNodeModalTitle">تسجيل مصروف</h3>
+            <button class="close-sheet" onclick="closeAllModals()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="sheet-body" style="padding-bottom: 80px; position:relative;">
+            <form id="form-add-node">
+                <input type="hidden" id="node-edit-id">
+                <input type="hidden" id="node-parent-id">
+                <input type="hidden" id="node-type" value="expense">
+                
+                <!-- 1. BASIC STRICT PRIORITY: Name, Amount, Category -->
+                <div class="form-section basic-section pb-2">
+                    <input type="text" id="node-title" class="huge-input mb-3" placeholder="اسم المصروف..." required maxlength="40" autocomplete="off" style="font-size: 18px; font-weight: 800; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; background: transparent; width:100%; box-sizing:border-box;">
+                    
+                    <div class="input-group">
+                        <input type="number" id="node-amount" class="huge-amount-input" placeholder="0.00 ج.م" step="0.01" min="0" required style="font-size: 24px; font-weight: 800; text-align: left; direction: ltr; font-family: monospace; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px;">
+                    </div>
+
+                    <div class="input-group" style="margin-bottom:0;">
+                        <select id="node-category" class="dynamic-category-select" required style="width:100%;">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 2. CONTEXT SECONDARY (Now Moved to Advanced) -->
+                <div class="form-section context-section" style="display:none;"></div>
+
+                <!-- ADVANCED TOGGLE -->
+                <div style="text-align:center; padding: 12px 0; border-top: 1px dashed var(--border-color);">
+                    <button type="button" class="text-btn" onclick="window.toggleAdvanced && window.toggleAdvanced('node-advanced-section', this)" style="color: var(--text-muted); font-weight: 700;">خيارات متقدمة <i class='bx bx-chevron-down'></i></button>
+                </div>
+
+                <!-- 3. ADVANCED -->
+                <div id="node-advanced-section" class="form-section advanced-section collapsible-section">
+                    
+                    <div class="input-group" style="margin-bottom:16px;">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px; display:block;">التاريخ والوقت</label>
+                        <input type="datetime-local" id="node-date" required style="width:100%; border-radius:12px; border:1px solid var(--border-color); padding:8px 12px; font-size:14px; background:var(--card-bg); color:var(--text-main);">
+                    </div>
+
+                    <div class="input-group mb-4">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px; display:block;">تصنيف فرعي</label>
+                        <input type="text" id="node-subcategory" placeholder="مثلاً: بيبسي، وجبة سريعة..." style="width:100%; font-size: 13px;">
+                    </div>
+
+                    <div class="input-group mb-4">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                            <i class='bx bx-purchase-tag' style="color:var(--primary); font-size:16px;"></i>
+                            <span style="font-size:12px; font-weight:700; color:var(--text-muted);">وسوم (Tags)</span>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                            <div id="node-labels-container" style="display:contents;"></div>
+                            <div id="node-quick-labels" style="display:contents;"></div>
+                            <input type="text" id="node-tag-input" list="all-labels-datalist"
+                                placeholder="+ وسم جديد"
+                                autocomplete="off"
+                                onkeypress="if(event.key==='Enter'){event.preventDefault();addLabelToForm('node');}"
+                                style="border:1.5px dashed var(--border-color); border-radius:20px; padding:5px 14px; font-size:12px; background:transparent; color:var(--text-main); width:110px; outline:none; font-family:inherit;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; display:block;">نوع المصروف</label>
+                        <div class="expense-type-selector">
+                            <label><input type="radio" name="node-expense-type" value="basic"><span>أساسي</span></label>
+                            <label><input type="radio" name="node-expense-type" value="normal" checked><span>عادي</span></label>
+                            <label><input type="radio" name="node-expense-type" value="entertainment"><span>رفاهية</span></label>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; display:block;">طريقة الدفع</label>
+                        <div class="expense-type-selector">
+                            <label><input type="radio" name="node-payment-method" value="cash" checked><span>نقدي</span></label>
+                            <label><input type="radio" name="node-payment-method" value="card"><span>بطاقة</span></label>
+                            <label><input type="radio" name="node-payment-method" value="wallet"><span>محفظة</span></label>
+                        </div>
+                    </div>
+
+                    <div class="input-group mb-4">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; display:block;">تفاصيل المدفوع له</label>
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <select id="node-paid-by" style="flex:1;" onchange="document.getElementById('node-other-name').style.display = this.value === 'other' ? 'block' : 'none'">
+                                <option value="self">دفعته بنفسي</option>
+                                <option value="other">شخص آخر دفع</option>
+                            </select>
+                            <input type="text" id="node-other-name" placeholder="اسم الشخص..." style="display:none; flex:1;">
+                        </div>
+                        <div class="expense-type-selector">
+                            <label><input type="radio" name="node-payment-type" value="normal" checked><span>استهلاك شخصي</span></label>
+                            <label><input type="radio" name="node-payment-type" value="gift"><span>هدية / تبرع</span></label>
+                            <label><input type="radio" name="node-payment-type" value="debt"><span>دين / سلف</span></label>
+                        </div>
+                    </div>
+
+                    <div class="input-group mb-4">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; display:block;">المكان (اختياري)</label>
+                        <input type="text" id="node-location" placeholder="مكان الدفع..." autocomplete="off">
+                    </div>
+
+                    <div class="input-group mb-4">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; display:block;">ملاحظات إضافية</label>
+                        <textarea id="node-notes" rows="2" placeholder="اكتب ملاحظاتك هنا..." style="resize: none;"></textarea>
+                    </div>
+
+                    <div class="input-group mb-4">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; display:block;">مرفقات (صورة فاتورة)</label>
+                        <input type="file" id="node-attachment" accept="image/*">
+                    </div>
+                </div>
+
+                <div class="save-btn-container" style="margin-top: 32px; padding-bottom: 24px;">
+                    <button type="submit" class="btn-primary full-width" style="height: 52px; font-size: 16px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">حفظ المصروف ✍️</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Trip Container (Single Day STRICT) -->
+    <div class="bottom-sheet" id="addTripModal">
+        <div class="sheet-header">
+            <h3 id="addTripModalTitle">مشوار جديد 🏃‍♂️</h3>
+            <button class="close-sheet" onclick="closeAllModals()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="sheet-body" style="flex: 1; overflow-y: auto; padding: 16px 24px;">
+            <form id="form-add-trip">
+                <input type="hidden" id="trip-edit-id">
+                
+                <div class="form-section basic-section pb-2">
+                    <input type="text" id="trip-title" class="huge-input mb-3" placeholder="اسم المشوار (مثال: نزهة الجمعة)..." required maxlength="40" autocomplete="off" style="font-size: 18px; font-weight: 800; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; background: transparent; width:100%; box-sizing:border-box;" autofocus>
+                    
+                    <div class="input-group" style="margin-top:12px;">
+                        <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px; display:block;">التاريخ والوقت</label>
+                        <input type="datetime-local" id="trip-start-date" required style="width:100%; border-radius:12px; border:1px solid var(--border-color); padding:8px 12px; font-size:14px; background:var(--card-bg); color:var(--text-main);">
+                    </div>
+                </div>
+
+                <!-- Tags / Labels Section -->
+                <div class="form-section" style="margin-top:16px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                        <i class='bx bx-purchase-tag' style="color:var(--primary); font-size:16px;"></i>
+                        <span style="font-size:12px; font-weight:700; color:var(--text-muted);">وسوم (Tags)</span>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                        <div id="trip-labels-container" style="display:contents;"></div>
+                        <div id="trip-quick-labels" style="display:contents;"></div>
+                        <input type="text" id="trip-tag-input" list="all-labels-datalist"
+                            placeholder="+ وسم جديد"
+                            autocomplete="off"
+                            onkeypress="if(event.key==='Enter'){event.preventDefault();addLabelToForm('trip');}"
+                            style="border:1.5px dashed var(--border-color); border-radius:20px; padding:5px 14px; font-size:12px; background:transparent; color:var(--text-main); width:110px; outline:none; font-family:inherit;">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="sticky-save-btn" style="padding: 16px 24px 24px; background: var(--card-bg); border-top: 1px solid var(--border-color); flex-shrink: 0;">
+            <button type="submit" form="form-add-trip" class="btn-primary full-width" style="height: 52px; font-size: 16px; border-radius: 14px;">حفظ المشوار</button>
+        </div>
+    </div>
+
+    <!-- Modal: Add Project Container (Multi-day STRICT) -->
+    <div class="bottom-sheet" id="addProjectModal">
+        <div class="sheet-header">
+            <h3 id="addProjectModalTitle">مشروع جديد 🏗️</h3>
+            <button class="close-sheet" onclick="closeAllModals()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="sheet-body" style="flex: 1; overflow-y: auto; padding: 16px 24px;">
+            <form id="form-add-project">
+                <input type="hidden" id="project-edit-id">
+                
+                <div class="form-section basic-section pb-2">
+                    <input type="text" id="project-title" class="huge-input mb-3" placeholder="اسم المشروع (مثال: رحلة الساحل، تشطيب شقة)..." required maxlength="40" autocomplete="off" style="font-size: 18px; font-weight: 800; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; background: transparent; width:100%; box-sizing:border-box;" autofocus>
+                    
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                        <div class="input-group" style="flex:1;">
+                            <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px; display:block;">تاريخ ووقت البدء</label>
+                            <input type="datetime-local" id="project-start-date" required style="width:100%; border-radius:12px; border:1px solid var(--border-color); padding:8px 12px; font-size:14px; background:var(--card-bg); color:var(--text-main);">
+                        </div>
+                        <div class="input-group" style="flex:1;">
+                            <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px; display:block;">نهاية متوقعة (اختياري)</label>
+                            <input type="date" id="project-end-date" style="width:100%; border-radius:12px; border:1px solid var(--border-color); padding:8px 12px; font-size:14px; background:var(--card-bg); color:var(--text-main);"> 
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tags / Labels Section -->
+                <div class="form-section" style="margin-top:16px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                        <i class='bx bx-purchase-tag' style="color:var(--primary); font-size:16px;"></i>
+                        <span style="font-size:12px; font-weight:700; color:var(--text-muted);">وسوم (Tags)</span>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                        <div id="project-labels-container" style="display:contents;"></div>
+                        <div id="project-quick-labels" style="display:contents;"></div>
+                        <input type="text" id="project-tag-input" list="all-labels-datalist"
+                            placeholder="+ وسم جديد"
+                            autocomplete="off"
+                            onkeypress="if(event.key==='Enter'){event.preventDefault();addLabelToForm('project');}"
+                            style="border:1.5px dashed var(--border-color); border-radius:20px; padding:5px 14px; font-size:12px; background:transparent; color:var(--text-main); width:110px; outline:none; font-family:inherit;">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="sticky-save-btn" style="padding: 16px 24px 24px; background: var(--card-bg); border-top: 1px solid var(--border-color); flex-shrink: 0;">
+            <button type="submit" form="form-add-project" class="btn-primary full-width" style="height: 52px; font-size: 16px; border-radius: 14px;">حفظ المشروع</button>
+        </div>
+    </div>
+
+    <!-- Modal: Manage Categories -->
+    <div class="bottom-sheet" id="manageCategoriesModal">
+        <div class="sheet-header">
+            <h3>إدارة التصنيفات</h3>
+            <button class="close-sheet" onclick="closeAllModals()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="sheet-body">
+            <ul id="categoriesList" class="settings-menu" style="margin-bottom: 16px; list-style:none; padding:0;">
+                <!-- Populated by JS -->
+            </ul>
+            <button type="button" class="btn-primary full-width" onclick="openModal('addCategoryModal')"><span>➕</span> إضافة تصنيف جديد</button>
+        </div>
+    </div>
+
+    <!-- Modal: Manage Custom Labels -->
+    <div class="bottom-sheet" id="manageLabelsModal">
+        <div class="sheet-header">
+            <h3>إدارة ملصقاتي</h3>
+            <button class="close-sheet" onclick="closeAllModals()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="sheet-body">
+            <form id="form-add-custom-label">
+                <div class="input-group">
+                    <label>إنشاء ملصق جديد للمقترحات</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="new-custom-label-input" placeholder="اسم الملصق (مثال: نادي، طوارئ)..." required maxlength="25" autocomplete="off">
+                        <button type="submit" class="btn-primary">+</button>
+                    </div>
+                </div>
+            </form>
+            <div style="margin-top:20px;">
+                <label style="display:block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">ملصقاتي الثابتة الحالية</label>
+                <ul id="customLabelsList" class="settings-menu" style="list-style:none; padding:0;">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Export Options (STRICT) -->
+    <div class="bottom-sheet" id="exportOptionsModal">
+        <div class="sheet-header">
+            <h3>تصدير البيانات (Export)</h3>
+            <button class="close-sheet" onclick="closeAllModals()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="sheet-body" style="padding-bottom:20px;">
+            <div class="input-group">
+                <label>صيغة الملف (Format)</label>
+                <div class="expense-type-selector">
+                    <label><input type="radio" name="export-format" value="xlsx" checked><span>Excel (.xlsx)</span></label>
+                    <label><input type="radio" name="export-format" value="csv"><span>CSV</span></label>
+                </div>
+            </div>
+            <div class="input-group mt-3">
+                <label>طريقة التجميع (Mode)</label>
+                <div class="expense-type-selector" style="flex-direction:column; align-items:flex-start;">
+                    <label style="width:100%;"><input type="radio" name="export-mode" value="flat" checked><span>قائمة مسطحة (Flat List)</span></label>
+                    <label style="width:100%;"><input type="radio" name="export-mode" value="trip"><span>مُجمّع حسب المشوار/المشروع</span></label>
+                    <label style="width:100%;"><input type="radio" name="export-mode" value="category"><span>مُجمّع بالتصنيف</span></label>
+                </div>
+            </div>
+            <button class="btn-primary full-width mt-3" onclick="executeAdvancedExport()"><i class='bx bx-download'></i> بدء التصدير</button>
+        </div>
+    </div>
+
+    <!-- Modal: Import Review (STRICT) -->
+    <div class="bottom-sheet" id="importReviewModal" style="height:90vh; max-height:90vh;">
+        <div class="sheet-header">
+            <h3>مراجعة البيانات المستوردة (Validation)</h3>
+            <button class="close-sheet" onclick="closeAllModals()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="sheet-body" style="height: calc(100% - 60px); overflow-y:auto; padding-bottom: 80px;">
+            <div class="summary-card blue-gradient mb-3">
+                <p style="font-size:13px; color:white;">سيتم التحقق من التكرار وإضافة التصنيفات الناقصة تلقائياً للحفاظ على سلامة التطبيق.</p>
+            </div>
+            
+            <div id="import-review-stats" style="display:flex; gap:8px; margin-bottom:12px; font-weight:700; font-size:14px;">
+                <span style="color:var(--success);">جديد: <span id="import-new-count">0</span></span>
+                <span style="color:var(--danger);">مكرر: <span id="import-dup-count">0</span></span>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:right;">
+                    <thead>
+                        <tr style="background:var(--bg-color); border-bottom:1px solid var(--border-color);">
+                            <th style="padding:8px;">الحالة</th>
+                            <th style="padding:8px;">الاسم</th>
+                            <th style="padding:8px;">المبلغ</th>
+                            <th style="padding:8px;">التصنيف</th>
+                        </tr>
+                    </thead>
+                    <tbody id="import-review-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sticky-save-btn" style="position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); padding: 12px; border-top: 1px solid var(--border-color); z-index: 10;">
+                <button class="btn-primary full-width" onclick="confirmImportSave()"><i class='bx bx-check'></i> تأكيد الحفظ المدقق</button>
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- End of #app-container -->
+
+    <!-- Global Item Action Dropdown (Edit/Delete/Add-Sub) -->
+    <div class="dropdown-menu" id="itemActionMenu" style="min-width: 130px; position: absolute; z-index: 2000;">
+        <button class="dropdown-item" id="btn-add-sub-item" onclick="handleAddSubItem()"><i class='bx bx-plus-circle'></i> إضافة مصروف</button>
+        <button class="dropdown-item" onclick="handleEditItem()"><i class='bx bx-pencil'></i> تعديل</button>
+        <button class="dropdown-item" style="color:var(--danger);" onclick="handleDeleteItem()"><i class='bx bx-trash' style="color:var(--danger);"></i> حذف</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <script type="module" src="js/main.js"></script>
+    <script>
+        // Emergency Fallback: Ensure UI functions are global even if module takes time
+        window.openModal = window.openModal || function(id) { console.warn("Modal call before module ready:", id); };
+        window.closeAllModals = window.closeAllModals || function() { console.warn("Close call before module ready"); };
+    </script>
+</body>
+</html>

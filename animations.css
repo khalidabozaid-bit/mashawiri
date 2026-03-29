@@ -1,0 +1,67 @@
+/* Mashawiri Motion System 🪄 */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Utility Classes */
+.animate-fade-in-up {
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Staggered entry for list items */
+.t-item {
+    opacity: 0;
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.t-item:nth-child(1) { animation-delay: 0.05s; }
+.t-item:nth-child(2) { animation-delay: 0.1s; }
+.t-item:nth-child(3) { animation-delay: 0.15s; }
+.t-item:nth-child(4) { animation-delay: 0.2s; }
+.t-item:nth-child(5) { animation-delay: 0.25s; }
+
+/* Modal Transitions */
+.bottom-sheet {
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+}
+
+.bottom-sheet.open {
+    animation: fadeInUp 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* View Switch Transition */
+.view.active {
+    animation: fadeIn 0.4s ease forwards;
+}

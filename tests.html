@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Mashawiri Test Runner 🧪</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text: #1e293b;
+        }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; }
+        .test-card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; border-right: 5px solid #cbd5e1; transition: all 0.3s; }
+        .test-card.pass { border-right-color: var(--success); }
+        .test-card.fail { border-right-color: var(--danger); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1); }
+        .test-title { font-weight: 800; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+        .test-details { font-size: 14px; color: #64748b; margin-top: 10px; font-family: monospace; white-space: pre-wrap; }
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 900; }
+        .badge-pass { background: #d1fae5; color: #065f46; }
+        .badge-fail { background: #fee2e2; color: #991b1b; }
+        .summary { background: var(--primary); color: white; padding: 25px; border-radius: 16px; margin-bottom: 40px; display: flex; justify-content: space-around; text-align: center; }
+        .summary-item div:first-child { font-size: 32px; font-weight: 900; }
+        .summary-item div:last-child { font-size: 14px; opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <i class='bx bx-test-tube' style="font-size: 40px; color: var(--primary);"></i>
+            <h1>اختبارات منطق "مشاويري"</h1>
+        </div>
+
+        <div id="summary" class="summary" style="display:none;">
+            <div class="summary-item">
+                <div id="total-tests">0</div>
+                <div>إجمالي الاختبارات</div>
+            </div>
+            <div class="summary-item">
+                <div id="passed-tests">0</div>
+                <div>ناجح</div>
+            </div>
+            <div class="summary-item">
+                <div id="failed-tests">0</div>
+                <div>فاشل</div>
+            </div>
+        </div>
+
+        <div id="test-results">
+            <p style="text-align:center; opacity:0.5;">جاري تشغيل الاختبارات...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { runTests } from './js/tree_test.js';
+        
+        const resultsContainer = document.getElementById('test-results');
+        const summary = document.getElementById('summary');
+        
+        async function start() {
+            try {
+                const results = await runTests();
+                resultsContainer.innerHTML = '';
+                summary.style.display = 'flex';
+                
+                let passed = 0;
+                results.forEach(res => {
+                    if (res.pass) passed++;
+                    const card = document.createElement('div');
+                    card.className = `test-card ${res.pass ? 'pass' : 'fail'}`;
+                    card.innerHTML = `
+                        <div class="test-title">
+                            <span>${res.name}</span>
+                            <span class="badge ${res.pass ? 'badge-pass' : 'badge-fail'}">${res.pass ? 'PASS' : 'FAIL'}</span>
+                        </div>
+                        <div class="test-details">${res.message || ''}</div>
+                    `;
+                    resultsContainer.appendChild(card);
+                });
+                
+                document.getElementById('total-tests').textContent = results.length;
+                document.getElementById('passed-tests').textContent = passed;
+                document.getElementById('failed-tests').textContent = results.length - passed;
+                
+            } catch (err) {
+                resultsContainer.innerHTML = `<div class="test-card fail">خطأ فادح أثناء تشغيل الاختبارات: ${err.message}</div>`;
+            }
+        }
+        
+        start();
+    </script>
+</body>
+</html>
