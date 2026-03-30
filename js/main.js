@@ -71,7 +71,7 @@ const navItems = document.querySelectorAll('.nav-item');
 const views = document.querySelectorAll('.view');
 const settingsDropdown = document.getElementById('settingsDropdown');
 
-export function switchView(viewId) {
+export function switchView(viewId, push = true) {
     views.forEach(v => v.classList.remove('active'));
     const viewEl = document.getElementById(viewId);
     if (viewEl) viewEl.classList.add('active');
@@ -82,7 +82,36 @@ export function switchView(viewId) {
             nav.classList.add('active');
         }
     });
+
+    if (push) {
+        const hash = "#/" + viewId.replace('view-', '');
+        history.pushState({ viewId }, "", hash);
+    }
 }
+
+// Handle Back Button
+window.addEventListener('popstate', (e) => {
+    // Check if the state we are coming FROM had a modal
+    const modalWasOpen = document.querySelector('.bottom-sheet.open');
+    
+    if (modalWasOpen) {
+        closeAllModals(true);
+        // If the new state still has a viewId, switch to it
+        if (e.state && e.state.viewId) {
+            switchView(e.state.viewId, false);
+        }
+        return;
+    }
+
+    if (e.state && e.state.viewId) {
+        switchView(e.state.viewId, false);
+    } else {
+        // Fallback to hash or dashboard
+        const hash = window.location.hash.replace('#/', '');
+        const viewId = hash ? 'view-' + hash : 'view-dashboard';
+        switchView(viewId, false);
+    }
+});
 
 export function toggleSettingsDropdown(e) {
     e.stopPropagation();
@@ -217,6 +246,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadData();
     initForms();
+
+    // Initial View Handling
+    const initialHash = window.location.hash.replace('#/', '');
+    if (initialHash) {
+        switchView('view-' + initialHash, false);
+    } else {
+        history.replaceState({ viewId: 'view-dashboard' }, "", "#/dashboard");
+    }
 
     // Feature Toggle Enforcement
     if (!CONFIG.features.enableProjects) {

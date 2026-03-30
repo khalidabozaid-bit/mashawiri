@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mashawiri Test Runner 🧪</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -27,17 +28,23 @@
         .badge-fail { background: #fee2e2; color: #991b1b; }
         .summary { background: var(--primary); color: white; padding: 25px; border-radius: 16px; margin-bottom: 40px; display: flex; justify-content: space-around; text-align: center; }
         .summary-item div:first-child { font-size: 32px; font-weight: 900; }
+        .header i { font-size: 40px; color: var(--primary); }
+        .summary { background: var(--primary); color: white; padding: 25px; border-radius: 16px; margin-bottom: 40px; display: flex; justify-content: space-around; text-align: center; }
+        .summary-item div:first-child { font-size: 32px; font-weight: 900; }
         .summary-item div:last-child { font-size: 14px; opacity: 0.9; }
+        #test-results p { text-align: center; opacity: 0.5; margin-top: 40px; }
+        .u-opacity-05 { opacity: 0.5; }
+        .u-text-center { text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <i class='bx bx-test-tube' style="font-size: 40px; color: var(--primary);"></i>
+            <i class='bx bx-test-tube'></i>
             <h1>اختبارات منطق "مشاويري"</h1>
         </div>
 
-        <div id="summary" class="summary" style="display:none;">
+        <div id="summary" class="summary u-hide">
             <div class="summary-item">
                 <div id="total-tests">0</div>
                 <div>إجمالي الاختبارات</div>
@@ -53,7 +60,7 @@
         </div>
 
         <div id="test-results">
-            <p style="text-align:center; opacity:0.5;">جاري تشغيل الاختبارات...</p>
+            <p class="u-text-center u-opacity-05">جاري تشغيل الاختبارات...</p>
         </div>
     </div>
 

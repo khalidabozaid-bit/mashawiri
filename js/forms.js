@@ -76,6 +76,11 @@ export function openModal(modalId, parentId = null) {
     const overlay = document.getElementById('modalOverlay');
     if (overlay) overlay.classList.add('show');
 
+    // Push state so back button closes modal
+    if (!history.state || history.state.modalId !== modalId) {
+        history.pushState({ modalId, viewId: history.state?.viewId || 'view-dashboard' }, "", window.location.hash);
+    }
+
     // Reset advanced section
     const advanced = modal.querySelector('.advanced-section.collapsible-section');
     if (advanced) {
@@ -136,10 +141,18 @@ export function openModal(modalId, parentId = null) {
     }
 }
 
-export function closeAllModals() {
+export function closeAllModals(fromHistory = false) {
     const overlay = document.getElementById('modalOverlay');
     if(overlay) overlay.classList.remove('show');
-    document.querySelectorAll('.bottom-sheet').forEach(sheet => {
+    
+    const openModals = document.querySelectorAll('.bottom-sheet.open');
+    
+    // If closing manually (not via back button), we need to pop the state
+    if (!fromHistory && openModals.length > 0 && history.state && history.state.modalId) {
+        history.back();
+    }
+
+    openModals.forEach(sheet => {
         sheet.classList.remove('open');
     });
     document.querySelectorAll('form').forEach(f => {
