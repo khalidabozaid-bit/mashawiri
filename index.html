@@ -3,8 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مصاريفي ومشاويري</title>
+    <title>مشاوريري - تتبع مصاريفك بذكاء</title>
+    <meta name="description" content="مشاوريري - تطبيق متكامل لمتابعة المصاريف والمشاوير الشخصية بتقنيات PWA ودعم كامل للغة العربية.">
+    <meta name="keywords" content="مصاريف, مشاوريري, ميزانية, PWA, عربية, تتبع الأموال">
     <meta name="theme-color" content="#3b82f6">
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="مشاوريري - تتبع مصاريفك بذكاء">
+    <meta property="og:description" content="نظام متكامل لمتابعة المصاريف والمشاوير بدقة وسهولة، يعمل بدون إنترنت ويدعم العربية.">
+    <meta property="og:image" content="icon.png">
+
     <link rel="manifest" href="manifest.json">
     
     <!-- iOS / Safari Support -->
@@ -12,6 +21,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="مشاويري">
     <link rel="apple-touch-icon" href="icon.png">
+    <!-- Performance: Resource Preloading -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" as="style">
+    <link rel="preload" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" as="style">
+
     <!-- Google Fonts: Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,22 +52,6 @@
         }
         #save-indicator.show { display: block; animation: fadeInUp 0.4s ease; }
     </style>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Mashawiri PWA: SW Registered.'))
-                    .catch(err => console.error('Mashawiri PWA: SW Registration failed.', err));
-            });
-        }
-        window.addEventListener('mashawiri-saved', () => {
-             const si = document.getElementById('save-indicator');
-             if(si) {
-                 si.classList.add('show');
-                 setTimeout(() => si.classList.remove('show'), 2000);
-             }
-         });
-    </script>
 </head>
 <body>
     <div id="save-indicator"><i class='bx bx-check-shield'></i> تم الحفظ</div>
@@ -73,16 +70,39 @@
                 <button class="dropdown-item" onclick="openModal('manageLabelsModal'); closeSettingsDropdown()"><i class='bx bx-purchase-tag'></i> إعدادات ملصقاتي (Labels)</button>
                 <div class="u-sep"></div>
                 <button class="dropdown-item" onclick="setMonthlyBudget(); closeSettingsDropdown()"><i class='bx bx-target-lock'></i> تحديد الميزانية الشهرية</button>
-                <button class="dropdown-item" onclick="openModal('exportOptionsModal'); closeSettingsDropdown()"><i class='bx bx-download'></i> تصدير البيانات (Excel/CSV)</button>
-                <button class="dropdown-item" onclick="document.getElementById('importFile').click(); closeSettingsDropdown()"><i class='bx bx-upload'></i> استيراد وتدقيق بيانات (رفع)</button>
-                <input type="file" id="importFile" class="u-hide" accept=".json,.csv,.xlsx" onchange="handleFileSelectForImport(event)" title="استيراد بيانات">
-                <div class="u-sep"></div>
                 <button class="dropdown-item" id="darkModeBtn" onclick="toggleTheme(); closeSettingsDropdown()"><i class='bx bx-moon'></i> الوضع الليلي</button>
+                
                 <div class="u-sep"></div>
-                <button class="dropdown-item" onclick="switchView('view-trash'); closeSettingsDropdown()"><i class='bx bx-trash'></i> سلة المحذوفات (Trash)</button>
                 <div class="u-sep"></div>
-                <button class="dropdown-item u-text-danger" onclick="window.deleteTodayExpensesHandler(); closeSettingsDropdown()"><i class='bx bx-trash-alt'></i> حذف مصروفات اليوم</button>
-                <button class="dropdown-item u-text-danger u-w-700" onclick="window.factoryResetHandler(); closeSettingsDropdown()"><i class='bx bx-reset'></i> إعادة ضبط المصنع (حذف الكل)</button>
+                <button class="dropdown-item" onclick="promptUserName()">
+                    <i class='bx bx-user-circle'></i> 
+                    <span id="settings-user-name">اسمي: صديقي</span>
+                </button>
+
+                <!-- Dynamic Update Button -->
+                <button class="dropdown-item" id="btn-update-app" onclick="handleUpdateApp()">
+                    <i class='bx bx-sync' id="update-icon"></i> 
+                    <span id="update-status-text">التطبيق محدث (v3.0)</span>
+                </button>
+
+                <div class="u-sep"></div>
+                <!-- Advanced Toggle -->
+                <button class="dropdown-item" onclick="toggleAdvancedSettings(event)">
+                    <i class='bx bx-cog'></i> 
+                    <span>خيارات متقدمة</span>
+                    <i class='bx bx-chevron-down' id="advanced-toggle-icon" style="margin-right: auto;"></i>
+                </button>
+
+                <!-- Hidden Advanced Group -->
+                <div id="advanced-settings-group" class="u-hide u-border-top u-mt-4 u-pt-4">
+                    <button class="dropdown-item" onclick="openModal('exportOptionsModal'); closeSettingsDropdown()"><i class='bx bx-download'></i> تصدير البيانات (Excel/CSV)</button>
+                    <button class="dropdown-item" onclick="document.getElementById('importFile').click(); closeSettingsDropdown()"><i class='bx bx-upload'></i> استيراد ملف بيانات</button>
+                    <button class="dropdown-item" onclick="switchView('view-trash'); closeSettingsDropdown()"><i class='bx bx-trash'></i> سلة المحذوفات (Trash)</button>
+                    
+                    <div class="u-sep"></div>
+                    <button class="dropdown-item u-text-danger" onclick="window.deleteTodayExpensesHandler(); closeSettingsDropdown()"><i class='bx bx-trash-alt'></i> حذف مصروفات اليوم</button>
+                    <button class="dropdown-item u-text-danger u-w-700" onclick="window.factoryResetHandler(); closeSettingsDropdown()"><i class='bx bx-reset'></i> إعادة ضبط المصنع (حذف الكل)</button>
+                </div>
             </div>
         </header>
 
@@ -403,7 +423,7 @@
                 </div>
 
                 <div class="save-btn-container u-mt-32 u-pb-24">
-                    <button type="submit" class="btn-primary full-width u-radius-14 u-shadow-md u-h-52 u-f-16">حفظ المصروف ✍️</button>
+                    <button type="submit" id="node-save-btn" class="btn-primary full-width u-radius-14 u-shadow-md u-h-52 u-f-16">حفظ المصروف ✍️</button>
                 </div>
             </form>
         </div>
@@ -602,7 +622,7 @@
         </div>
     </div>
 
-    <div class="dropdown-menu u-min-w-130 u-absolute u-z-2000" id="itemActionMenu">
+    <div class="dropdown-menu" id="itemActionMenu">
         <button class="dropdown-item" id="btn-add-sub-item" onclick="handleAddSubItem()"><i class='bx bx-plus-circle'></i> إضافة مصروف</button>
         <button class="dropdown-item" onclick="handleEditItem()"><i class='bx bx-pencil'></i> تعديل</button>
         <button class="dropdown-item u-text-danger" onclick="handleDeleteItem()"><i class='bx bx-trash u-text-danger'></i> حذف</button>

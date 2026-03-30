@@ -5,6 +5,7 @@ import { DB } from './db.js';
 
 // Internal state
 let _appData = {
+    userName: "صديقي",
     categories: [...DEFAULT_CATEGORIES],
     customLabels: [...DEFAULT_LABELS],
     nodes: []
@@ -112,6 +113,7 @@ export async function loadData() {
                 if (settings.categories) _appData.categories = settings.categories;
                 if (settings.customLabels) _appData.customLabels = settings.customLabels;
                 if (settings.monthlyBudget) _appData.monthlyBudget = settings.monthlyBudget;
+                if (settings.userName) _appData.userName = settings.userName;
             }
             isInitialized = true;
             rebuildNodeMap();
@@ -239,7 +241,8 @@ export async function saveData() {
         const settings = {
             categories: _appData.categories,
             customLabels: _appData.customLabels,
-            monthlyBudget: _appData.monthlyBudget
+            monthlyBudget: _appData.monthlyBudget,
+            userName: _appData.userName
         };
         await DB.set('appSettings', settings, 'appDataStore');
 

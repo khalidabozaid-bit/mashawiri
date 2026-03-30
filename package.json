@@ -1,0 +1,23 @@
+{
+  "name": "mashawiri",
+  "version": "1.1.0",
+  "description": "تطبيق مشاوريري - نظام متكامل لمتابعة المصاريف والمشاوير الشخصية بتقنيات PWA ودعم كامل للغة العربية.",
+  "main": "js/main.js",
+  "scripts": {
+    "start": "npx live-server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "pwa",
+    "budget",
+    "arabic",
+    "expenses",
+    "mashawiri"
+  ],
+  "author": "Khalid Abozaid",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^4.4.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz"
+  }
+}

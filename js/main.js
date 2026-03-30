@@ -1,4 +1,51 @@
-// js/main.js
+// --- Resilience & Error Handling ---
+window.onerror = (msg, url, line, col, error) => {
+    console.error(`[Mashawiri Error] ${msg} at ${line}:${col}`);
+    // Optional: Add UI toast here if critical
+    return false;
+};
+
+window.onunhandledrejection = (event) => {
+    console.error(`[Mashawiri Promise Error] ${event.reason}`);
+};
+
+// --- PWA Service Worker Registration ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // Optimization: Skip Service Worker on localhost for immediate updates while developing
+        const isLocalhost = Boolean(
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '[::1]' ||
+            window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
+        );
+
+        if (isLocalhost) {
+            console.log('Mashawiri PWA: Localhost detected. Skipping Service Worker for live updates.');
+            return;
+        }
+
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+                console.log('Mashawiri PWA: SW Registered.');
+                
+                // Detection if a new SW was just activated (controller-change)
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('Mashawiri PWA: New version detected and taking control. Reloading...');
+                    window.location.reload();
+                });
+            })
+            .catch(err => console.error('Mashawiri PWA: SW Registration failed.', err));
+    });
+}
+
+// --- Global UI Listeners ---
+window.addEventListener('mashawiri-saved', () => {
+     const si = document.getElementById('save-indicator');
+     if(si) {
+         si.classList.add('show');
+         setTimeout(() => si.classList.remove('show'), 2000);
+     }
+});
 
 import { appData, loadData, saveData } from './state.js';
 import { Actions } from './actions.js';
@@ -24,6 +71,19 @@ window.renderCategorySelects = renderCategorySelects;
 window.renderCategoriesManager = renderCategoriesManager;
 window.deleteCategoryHandler = deleteCategoryHandler;
 window.setMonthlyBudget = setMonthlyBudget;
+window.handleUpdateApp = handleUpdateApp;
+window.toggleAdvancedSettings = toggleAdvancedSettings;
+
+export function promptUserName() {
+    const newName = prompt("ما هو الاسم الذي تحب أن يناديك به التطبيق؟", appData.userName || "");
+    if (newName !== null && newName.trim() !== "") {
+        appData.userName = newName.trim();
+        const settingsNameEl = document.getElementById('settings-user-name');
+        if (settingsNameEl) settingsNameEl.textContent = `اسمي: ${appData.userName}`;
+        if (window.updateUI) window.updateUI();
+    }
+}
+window.promptUserName = promptUserName;
 window.completeNodeHandler = (id) => {
     if (!confirm('هل تريد إنهاء هذا البند؟')) return;
     Actions.completeNode(id);
@@ -69,7 +129,7 @@ window.emptyTrashHandler = () => {
 
 const navItems = document.querySelectorAll('.nav-item');
 const views = document.querySelectorAll('.view');
-const settingsDropdown = document.getElementById('settingsDropdown');
+// Removed stale settingsDropdown reference
 
 export function switchView(viewId, push = true) {
     views.forEach(v => v.classList.remove('active'));
@@ -114,12 +174,14 @@ window.addEventListener('popstate', (e) => {
 });
 
 export function toggleSettingsDropdown(e) {
-    e.stopPropagation();
-    if(settingsDropdown) settingsDropdown.classList.toggle('show');
+    if(e) e.stopPropagation();
+    const dropdown = document.getElementById('settingsDropdown');
+    if(dropdown) dropdown.classList.toggle('show');
 }
 
 export function closeSettingsDropdown() {
-    if(settingsDropdown) settingsDropdown.classList.remove('show');
+    const dropdown = document.getElementById('settingsDropdown');
+    if(dropdown) dropdown.classList.remove('show');
 }
 
 export function toggleTheme() {
@@ -152,7 +214,7 @@ export function closeSearch() {
 }
 window.closeSearch = closeSearch;
 
-// Global click event to close dropdowns / action menus
+// Global click event to close dropdowns / action menus (Restored and Improved)
 document.addEventListener('click', (e) => {
     // Action menu (Edit/Delete)
     const menu = document.getElementById('itemActionMenu');
@@ -161,10 +223,56 @@ document.addEventListener('click', (e) => {
     }
     
     // Settings menu
-    if (settingsDropdown && !settingsDropdown.contains(e.target) && !e.target.closest('.settings-btn')) {
-        settingsDropdown.classList.remove('show');
+    const dropdown = document.getElementById('settingsDropdown');
+    const settingsBtn = document.getElementById('settingsCogBtn');
+    if (dropdown && !dropdown.contains(e.target) && (!settingsBtn || !settingsBtn.contains(e.target))) {
+        dropdown.classList.remove('show');
     }
 });
+
+export function toggleAdvancedSettings(e) {
+    if(e) e.stopPropagation();
+    const group = document.getElementById('advanced-settings-group');
+    const icon = document.getElementById('advanced-toggle-icon');
+    if(!group || !icon) return;
+    
+    const isHidden = group.classList.contains('u-hide');
+    if(isHidden) {
+        group.classList.remove('u-hide');
+        icon.classList.replace('bx-chevron-down', 'bx-chevron-up');
+    } else {
+        group.classList.add('u-hide');
+        icon.classList.replace('bx-chevron-up', 'bx-chevron-down');
+    }
+}
+
+let swRegistration = null;
+export async function handleUpdateApp() {
+    const statusText = document.getElementById('update-status-text');
+    const icon = document.getElementById('update-icon');
+    
+    if (swRegistration && swRegistration.waiting) {
+        // Send skipWaiting to the waiting SW
+        swRegistration.waiting.postMessage({ action: 'skipWaiting' });
+        if(statusText) statusText.textContent = "جاري التحديث...";
+        return;
+    }
+
+    // Manual check
+    if(swRegistration) {
+        if(statusText) statusText.textContent = "جاري الفحص...";
+        try {
+            await swRegistration.update();
+            setTimeout(() => {
+                if(!swRegistration.waiting && statusText) {
+                    statusText.textContent = "التطبيق محدث (v3.0)";
+                }
+            }, 1500);
+        } catch(e) {
+            if(statusText) statusText.textContent = "فشل الفحص";
+        }
+    }
+}
 
 // Category and Labels Renderers missing from split
 export function renderCategorySelects() {
@@ -247,7 +355,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadData();
     initForms();
 
-    // Initial View Handling
+    // Service Worker Update Support
+    if ('serviceWorker' in navigator) {
+        try {
+            const reg = await navigator.serviceWorker.register('./sw.js');
+            swRegistration = reg;
+            console.log('Mashawiri PWA: SW Registered.');
+
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        const statusText = document.getElementById('update-status-text');
+                        const icon = document.getElementById('update-icon');
+                        if(statusText) {
+                            statusText.textContent = "تحديث جديد متاح! اضغط هنا";
+                            statusText.classList.add('update-available-pulse');
+                        }
+                        if(icon) {
+                            icon.className = 'bx bx-cloud-download bx-tada';
+                            icon.style.color = "var(--primary)";
+                        }
+                    }
+                });
+            });
+        } catch (err) {
+            console.error('Mashawiri PWA: SW Registration failed.', err);
+        }
+        
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+        });
+    }
+
+    // Initial View Handling (Restored)
     const initialHash = window.location.hash.replace('#/', '');
     if (initialHash) {
         switchView('view-' + initialHash, false);

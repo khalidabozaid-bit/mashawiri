@@ -2,13 +2,18 @@
 
 import { appData, saveData } from './state.js';
 import { getChildrenOf } from './tree.js';
-import { generateId, getNowLocalString } from './helpers.js';
+import { generateId, getNowLocalString, escapeHTML } from './helpers.js';
 import { NODE_STATUS } from './constants.js';
 import { CONFIG } from './config.js';
 
 export const Actions = {
     // NODE MUTATIONS
     addOrUpdateNode: function(nodeData) {
+        // Sanitize sensitive text fields
+        if (nodeData.title) nodeData.title = escapeHTML(nodeData.title);
+        if (nodeData.notes) nodeData.notes = escapeHTML(nodeData.notes);
+        if (nodeData.subcategory) nodeData.subcategory = escapeHTML(nodeData.subcategory);
+
         const existingIndex = appData.nodes.findIndex(n => n.id === nodeData.id);
         if (existingIndex > -1) {
             Object.assign(appData.nodes[existingIndex], nodeData);

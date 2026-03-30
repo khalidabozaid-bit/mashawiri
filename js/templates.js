@@ -9,9 +9,9 @@ import { NODE_TYPES, CONSUMPTION_TYPES } from './constants.js';
  */
 export function getTypeBadgeHtml(itemType) {
     if (itemType === 'fixed') {
-        return `<span class="u-badge u-badge-primary"><i class='bx bx-lock-alt'></i> أساسي/ثابت</span>`;
+        return `<span class="u-badge u-badge-primary"><i class='bx bx-lock-alt'></i> أساسي</span>`;
     } else if (itemType === CONSUMPTION_TYPES.LUXURY) {
-        return `<span class="u-badge" style="color:#c026d3; background:#fae8ff;"><i class='bx bx-party'></i> ترفيه/كمالي</span>`;
+        return `<span class="u-badge" style="color:#c026d3; background:#fae8ff;"><i class='bx bx-party'></i> ترفيه</span>`;
     }
     return '';
 }
@@ -22,138 +22,127 @@ export function renderTagsHtml(tagsArr) {
 }
 
 /**
- * ── SUB-ROW (Recursive) ───────────────────────────────────────────
+ * ── SUB-ITEM (Fixed Rules Component) ─────────────────────────────────
+ * Rules:
+ * - isDetail: true -> Numbered (1. 2.), Dots on LEFT, No Icon.
+ * - isDetail: false -> Not Numbered (Trip/Project peers), Dots on LEFT, Small Icon.
+ *   Category Badge is now beside the AMOUNT for !isDetail items.
  */
-export function renderSubNodeRowHTML(item, parentId = null, idSuffix = '') {
+export function generateInnerNodeHTML(item, parentId = null, idSuffix = '', index = null, isDetail = true) {
+    const fin = computeNodeFinancials(item);
     const children = getChildrenOf(item.id);
     const hasChildren = children.length > 0;
-    const fin = computeNodeFinancials(item);
-    const amountStr = formatCurrency(fin.effectiveTotal);
-    
-    let untrackedHtml = '';
-    if (hasChildren && item.amount) {
-        if (fin.untracked > 0) {
-            untrackedHtml = `<span class="u-badge u-badge-warning"><i class='bx bx-info-circle'></i> متبقي: ${formatCurrency(fin.untracked)}</span>`;
-        } else if (fin.untracked < 0) {
-            untrackedHtml = `<span class="u-badge u-badge-danger"><i class='bx bx-error'></i> تجاوز: ${formatCurrency(Math.abs(fin.untracked))}</span>`;
-        }
-    }
-    
-    const accordionId = `inner-sub-${item.id}${idSuffix}`;
+    const catSettings = getCategoryObj(item.category);
+    const accordionId = `inner-${item.id}${idSuffix}`;
 
-    let html = `
-        <div class="sub-node-row">
-            <div class="u-flex-between">
-                <div class="u-flex-center" style="flex:1; flex-wrap:wrap;">
-                     <i class='bx bx-check-double' style="color:var(--primary); font-size:16px; opacity:0.7;"></i>
-                     <div style="font-size:13px; font-weight:700; color:var(--text-main); line-height:1.2;">${item.title} ${untrackedHtml}</div>
-                     ${hasChildren ? `<small class="u-badge u-badge-info" style="cursor:pointer;" onclick="event.stopPropagation(); window.toggleTripAccordion('${accordionId}', event);">(${children.length} تفاصيل) <i class='bx bx-chevron-down'></i></small>` : ''}
-                </div>
-                
-                <div class="u-flex-center">
-                    <div class="t-amount" style="font-size:13px; font-weight:700; color:var(--text-main); font-family:monospace;">${amountStr} ج.م</div>
-                    <button class="item-dots-v2" onclick="event.stopPropagation(); window.openItemActionMenu && window.openItemActionMenu(event, '${item.id}', '${NODE_TYPES.EXPENSE}', '${parentId || ''}')"><i class='bx bx-dots-vertical-rounded'></i></button>
-                </div>
-            </div>`;
+    return `
+        <div class="t-item sub-item-row" style="position:relative; display:flex; align-items:center; padding:10px 12px; margin-bottom:0; border-bottom:1px solid var(--border-color);">
+            <button class="item-dots-v2" onclick="openItemActionMenu(event, '${item.id}', '${NODE_TYPES.EXPENSE}', '${parentId || ''}')" style="position:absolute; left:4px; top:50%; transform:translateY(-50%); z-index:10;"><i class='bx bx-dots-vertical-rounded'></i></button>
 
-    if (hasChildren) {
-        let subHtml = children.map(ch => renderSubNodeRowHTML(ch, item.id, idSuffix)).join('');
-        html += `
-            <div id="${accordionId}" class="sub-node-container" style="display:none;">
-                ${subHtml}
-                <div style="text-align:center; padding-top:4px;">
-                    <button class="text-btn" style="font-size:11px; font-weight:800;" onclick="openModal('addNodeModal', '${item.id}')">+ إضافة تفصيل آخر</button>
-                </div>
-            </div>`;
-    }
+            <div class="u-flex-center" style="width:100%; align-items:center; gap:8px;">
+                <div class="t-details" style="flex:1; display:flex; align-items:center; justify-content:space-between; padding-left:24px;">
+                    <!-- Right Side: Icon/Number + Title -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        ${isDetail && index !== null ? `
+                            <span style="font-size:13px; font-weight:800; color:var(--text-muted); min-width:18px;">${index}.</span>
+                        ` : `
+                            <div style="width:24px; height:24px; min-width:24px; border-radius:8px; background:${catSettings.bg}; color:${catSettings.color}; display:flex; align-items:center; justify-content:center; font-size:14px;">
+                                <i class='bx ${catSettings.icon}'></i>
+                            </div>
+                        `}
+                        
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <h4 style="font-size:13.5px; font-weight:700; color:var(--text-main); margin:0; line-height:1.2;">${item.title}</h4>
+                            ${hasChildren ? `
+                                <span class="u-badge u-badge-info" style="font-size:9px; cursor:pointer;" onclick="event.stopPropagation(); window.toggleTripAccordion('${accordionId}', event);">${children.length} تفاصيل <i class='bx bx-chevron-down'></i></span>
+                            ` : ''}
+                        </div>
+                    </div>
 
-    html += `</div>`;
-    return html;
+                    <!-- Left Side: Category Tag + Amount -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        ${!isDetail ? `
+                            <span style="font-size:9.5px; font-weight:800; color:${catSettings.color}; background:${catSettings.bg}; padding:2px 7px; border-radius:5px; line-height:1; white-space:nowrap;">${catSettings.name}</span>
+                        ` : ''}
+                        <span class="t-amount minus" style="font-size:13.5px; font-weight:800; font-family:monospace; margin:0; white-space:nowrap;">${formatCurrency(fin.effectiveTotal)} ج.م</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        ${hasChildren ? `
+            <div id="${accordionId}" class="sub-node-container" style="margin-right:24px; border-right:2px solid ${catSettings.color}; display:none;">
+                ${children.map((ch, idx) => generateInnerNodeHTML(ch, item.id, idSuffix, idx + 1, true)).join('')}
+            </div>
+        ` : ''}
+    `;
 }
 
 /**
- * ── INNER NODE (Wrapper) ──────────────────────────────────────────
- */
-export function generateInnerNodeHTML(exp, parentId = null, idSuffix = '') {
-    return renderSubNodeRowHTML(exp, parentId, idSuffix);
-}
-
-/**
- * ── STANDALONE EXPENSE ────────────────────────────────────────────
+ * ── MAIN EXPENSE CARD (Root Level) ─────────────────────────────────────
  */
 export function generateNodeHTML(item, idSuffix = '') {
     const fin = computeNodeFinancials(item);
     const children = getChildrenOf(item.id);
     const hasChildren = children.length > 0;
-    
     const catSettings = getCategoryObj(item.category);
     const tagsHtml = renderTagsHtml(item.tags);
 
-    let untrackedHtml = '';
+    let budgetStatusHtml = '';
     if (hasChildren && item.amount) {
         if (fin.untracked > 0) {
-            untrackedHtml = `<span class="u-badge u-badge-warning"><i class='bx bx-minus-circle'></i> غير مسجل: ${formatCurrency(fin.untracked)}</span>`;
+            budgetStatusHtml = `<span class="u-badge" style="background:rgba(34,197,94,0.1); color:#16a34a; border:1px solid rgba(34,197,94,0.2);"><i class='bx bx-wallet'></i> متبقي: ${formatCurrency(fin.untracked)}</span>`;
         } else if (fin.untracked < 0) {
-            untrackedHtml = `<span class="u-badge u-badge-danger"><i class='bx bx-error-alt'></i> تجاوز: ${formatCurrency(Math.abs(fin.untracked))}</span>`;
+            budgetStatusHtml = `<span class="u-badge u-badge-danger" style="background:rgba(239,68,68,0.1); color:#dc2626; border:1px solid rgba(239,68,68,0.2);"><i class='bx bx-trending-up'></i> تجاوز: ${formatCurrency(Math.abs(fin.untracked))}</span>`;
         }
     }
 
     const accordionId = `dynamic-${item.id}${idSuffix}`;
 
-    let html = `
+    return `
         <div class="t-item" style="position:relative; align-items:flex-start; padding:16px 12px 16px 16px; margin-bottom:8px;">
             <button class="item-dots-v2" onclick="openItemActionMenu(event, '${item.id}', '${NODE_TYPES.EXPENSE}', '${item.parent_id || ''}')" style="position:absolute; right:0px; top:8px; z-index:10;"><i class='bx bx-dots-vertical-rounded'></i></button>
             <div class="u-flex-center" style="width:100%; align-items:flex-start; padding-right:16px; gap:12px;">
-                <div class="u-column-center" style="min-width:48px;">
+                <div class="u-column-center" style="min-width:48px; padding-top:2px;">
                     <div class="t-icon" style="background:${catSettings.bg}; color:${catSettings.color}; width:38px; height:38px; min-width:38px; font-size:20px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
                         <i class='bx ${catSettings.icon}'></i>
                     </div>
-                    <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-align:center;">${formatDateTime(item.date)}</span>
+                    <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-align:center; margin-top:4px;">${formatDateTime(item.date)}</span>
                 </div>
-                <div class="t-details" style="flex:1;">
-                    <div class="u-flex-between" style="margin-bottom:8px;">
-                        <h4 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${item.title}</h4>
-                        <span class="t-amount minus" style="font-size:16px; font-weight:800; font-family:monospace; margin:0;">${formatCurrency(fin.effectiveTotal)} ج.م</span>
+                <!-- Standardized: 17px, Bold (750) -->
+                <div class="t-details" style="flex:1; text-align:right; margin-top:8px;">
+                    <div class="u-flex-between" style="margin-bottom:8px; align-items:center;">
+                        <h4 style="font-size:17px; font-weight:750; color:var(--text-main); margin:0; line-height:1.2;">${item.title}</h4>
+                        <span class="t-amount minus" style="font-size:17px; font-weight:800; font-family:monospace; margin:0; margin-right:8px;">${formatCurrency(fin.effectiveTotal)} ج.م</span>
                     </div>
-                    <div class="u-flex-center" style="flex-wrap:wrap; gap:6px;">
-                        <span class="u-badge" style="color:${catSettings.color}; background:${catSettings.bg}; font-size:11px; font-weight:700; cursor:pointer;" onclick="event.stopPropagation(); window.openFilterView && window.openFilterView('category', '${catSettings.id}')">${catSettings.name}</span>
+                    <div class="u-flex" style="flex-wrap:wrap; gap:6px; justify-content:flex-start; align-items:center;">
+                        <span class="u-badge" style="color:${catSettings.color}; background:${catSettings.bg}; font-size:11.5px; font-weight:700;">${catSettings.name}</span>
                         ${hasChildren ? `<span class="u-badge u-badge-info" style="cursor:pointer;" onclick="event.stopPropagation(); window.toggleTripAccordion('${accordionId}', event);"><i class='bx bx-list-ul'></i> ${children.length} تفاصيل <i class='bx bx-chevron-down'></i></span>` : ''}
-                        ${untrackedHtml}
-                        ${item.subcategory ? `<span class="u-badge u-badge-muted"><i class='bx bx-git-branch'></i> ${item.subcategory}</span>` : ''}
+                        ${budgetStatusHtml}
+                        ${item.subcategory ? `<span class="u-badge u-badge-muted">${item.subcategory}</span>` : ''}
                         ${getTypeBadgeHtml(item.basic_type)}
                         ${tagsHtml ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-right:6px; padding-right:6px; border-right:1px solid var(--border-color);">${tagsHtml}</div>` : ''}
                     </div>
                 </div>
             </div>
         </div>
-    `;
 
-    if (hasChildren) {
-        let innerHtml = children.map(ch => generateInnerNodeHTML(ch, item.id, idSuffix)).join('');
-        html += `
-            <div id="${accordionId}" class="sub-node-container" style="margin-right:32px; display:none;">
-                ${innerHtml}
-                <button class="btn-primary small-btn full-width" style="margin-top:12px; font-size:12px; background:var(--border-color); color:var(--primary); box-shadow:none; padding:8px; font-weight:700;" onclick="window.openModal && window.openModal('addNodeModal', '${item.id}')"><i class='bx bx-plus'></i> أضف تفصيل سريع</button>
+        ${hasChildren ? `
+            <div id="${accordionId}" class="sub-node-container" style="margin-right:32px; border-right:2px solid ${catSettings.color}; display:none;">
+                ${children.map((ch, idx) => generateInnerNodeHTML(ch, item.id, idSuffix, idx + 1, true)).join('')}
+                <div style="text-align: center; margin-top:8px;">
+                    <button class="btn-primary small-btn full-width" style="margin:0 auto; font-size:12px; font-weight:700; background:transparent; color:var(--primary); box-shadow:none; padding:10px; border-radius:8px;" onclick="window.openModal && window.openModal('addNodeModal', '${item.id}')"><i class='bx bx-plus-circle'></i> إضافة تفصيل آخر</button>
+                </div>
             </div>
-        `;
-    }
-
-    return html;
+        ` : ''}
+    `;
 }
 
-
 /**
- * ── TRIP CARD ─────────────────────────────────────────────────────
+ * ── TRIP CARD (Container Level) ─────────────────────────────────────────
  */
 export function generateTripHTML(item, idSuffix = '', isPartial = false) {
     const children = isPartial ? (item._filteredChildren || []) : getChildrenOf(item.id);
     const totalAmount = isPartial ? (item._dayTotal || 0) : computeNodeFinancials(item).effectiveTotal;
-    
-    let innerHtml = '';
-    if (children.length > 0) {
-        innerHtml = children.map(exp => generateInnerNodeHTML(exp, item.id, idSuffix)).join('');
-    }
-
     const accordionId = `trip-body-${item.id}${idSuffix}`;
 
     return `
@@ -161,17 +150,18 @@ export function generateTripHTML(item, idSuffix = '', isPartial = false) {
             <div class="trip-header" onclick="window.toggleTripAccordion('${accordionId}', event)" style="position:relative; padding:12px 16px; cursor:pointer; display:flex; align-items:center;">
                 <button class="item-dots-v2" onclick="event.stopPropagation(); window.openItemActionMenu && window.openItemActionMenu(event, '${item.id}', '${NODE_TYPES.TRIP}')" style="position:absolute; right:0px; top:8px; z-index:10;"><i class='bx bx-dots-vertical-rounded'></i></button>
                 <div class="u-flex-center" style="width:100%; padding-right:12px; gap:12px;">
-                    <div class="u-column-center" style="min-width:48px;">
+                    <div class="u-column-center" style="min-width:48px; padding-top:2px;">
                         <div class="u-column-center" style="background:transparent; width:36px; height:36px;">
                             <span style="font-size:9px; font-weight:700; color:var(--primary); margin-bottom:-4px;">مشوار</span>
                             <i class='bx bx-run' style="font-size:20px; color:var(--primary);"></i>
                         </div>
-                        <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-align:center;">${formatDateTime(item.date)}</span>
+                        <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-align:center; margin-top:4px;">${formatDateTime(item.date)}</span>
                     </div>
-                    <div class="t-details" style="flex:1;">
-                        <div class="u-flex-between" style="margin-bottom:4px;">
-                            <h4 style="color:var(--text-main); font-size:15px; margin:0; line-height:1.2; font-weight:750;">${item.title} ${isPartial ? '<small style="font-size:10px; opacity:0.6;">(يومي)</small>' : ''}</h4>
-                            <div class="t-amount minus" style="font-size:16px; font-weight:800; font-family:monospace; margin:0;">
+                    <!-- Standardized: 17px, Bold (750) -->
+                    <div class="t-details" style="flex:1; margin-top:8px;">
+                        <div class="u-flex-between" style="margin-bottom:4px; align-items:center;">
+                            <h4 style="color:var(--text-main); font-size:17px; margin:0; line-height:1.2; font-weight:750;">${item.title}</h4>
+                            <div class="t-amount minus" style="font-size:17px; font-weight:800; font-family:monospace; margin:0;">
                                 ${formatCurrency(totalAmount)} ج.م
                             </div>
                         </div>
@@ -183,14 +173,20 @@ export function generateTripHTML(item, idSuffix = '', isPartial = false) {
                 </div>
             </div>
             
-            <div class="trip-body" id="${accordionId}">
-                <div class="sub-node-container" style="margin-right:32px; border-right-color:#cbd5e1;">
+            <div class="trip-body" id="${accordionId}" style="display:none;">
+                <div class="sub-node-container" style="margin-right:32px; border-right:2px solid var(--primary); ${children.length === 0 ? 'background:transparent; border:none; padding:0; margin-bottom:8px;' : ''}">
                     <div class="inner-expenses">
-                        ${innerHtml}
+                        ${children.map((exp, idx) => generateInnerNodeHTML(exp, item.id, idSuffix, null, false)).join('')}
                     </div>
-                    <div style="padding: 12px 0 0 0; text-align: center; ${children.length > 0 ? 'border-top: 1px dashed var(--border-color); margin-top:8px;' : ''}">
-                        <button class="btn-primary small-btn full-width" style="margin:0 auto; font-size:12px; font-weight:700; background:var(--border-color); color:var(--primary); box-shadow:none; padding:8px; border-radius:8px;" onclick="openModal('addNodeModal', '${item.id}')"><i class='bx bx-plus'></i> إضافة مصروف للمشوار</button>
-                    </div>
+                    ${children.length > 0 ? `
+                        <div style="text-align: center; border-top: 1px dashed var(--border-color); margin-top:8px; padding-top:12px;">
+                            <button class="btn-primary small-btn full-width" style="margin:0 auto; font-size:11px; font-weight:700; background:transparent; color:var(--primary); box-shadow:none; padding:6px; border-radius:8px;" onclick="openModal('addNodeModal', '${item.id}')"><i class='bx bx-plus-circle'></i> إضافة مصروف للمشوار</button>
+                        </div>
+                    ` : `
+                        <div style="padding-top:4px; text-align:center;">
+                            <button class="btn-primary small-btn full-width" style="margin:0 auto; font-size:11px; font-weight:700; background:transparent; color:var(--primary); box-shadow:none; padding:6px; border-radius:8px;" onclick="openModal('addNodeModal', '${item.id}')"><i class='bx bx-plus-circle'></i> إضافة مصروف للمشوار</button>
+                        </div>
+                    `}
                 </div>
             </div>
         </div>
@@ -235,34 +231,29 @@ export function generateProjectHTML(project, isCompleted = false, idSuffix = '',
                 <span style="font-size:11px; font-weight:700; color:#64748b; margin-right:8px;">${formatCurrency(dayTotal)} ج.م</span>
             </div>
         `;
-        grouped[dateKey].forEach(child => { childrenHtml += generateInnerNodeHTML(child, project.id, idSuffix); });
+        grouped[dateKey].forEach((child, idx) => { childrenHtml += generateInnerNodeHTML(child, project.id, idSuffix, null, false); });
     });
 
     const cardId = `proj-card-${project.id}${idSuffix}`;
     const expandId = `proj-expand-${project.id}${idSuffix}`;
     const tripBodyId = `trip-body-${project.id}${idSuffix}`;
-    const iconClass = project.type === NODE_TYPES.TRIP ? 'bx-run' : 'bx-briefcase';
 
     return `
         <div id="${cardId}" class="project-card ${isCompleted ? 'completed' : ''}">
-
             <div onclick="window.toggleProjectCard('${project.id}', '${idSuffix}', event)" class="u-flex-center" style="padding:14px 16px; cursor:pointer;">
                 <div style="background:rgba(255,255,255,0.1); border-radius:10px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                    <i class='bx ${iconClass}' style="font-size:20px; color:white;"></i>
+                    <i class='bx bx-briefcase' style="font-size:22px; color:white;"></i>
                 </div>
-                <div style="flex:1; min-width:0;">
-                    <div class="u-flex-center" style="margin-bottom:2px;">
-                        <span style="font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${project.title}</span>
-                        ${isCompleted ? `<span style="font-size:9px; background:#22c55e; color:white; padding:2px 6px; border-radius:8px; font-weight:800;">✅</span>` : ''}
-                    </div>
-                    <div style="font-size:11px; opacity:0.55; display:flex; gap:8px;">
-                        <span><i class='bx bx-list-ul'></i> ${children.length} مصروف</span>
+                <div style="flex:1; margin-right:12px;">
+                    <div style="font-size:15px; font-weight:800; color:white; margin-bottom:2px;">${project.title}</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:rgba(255,255,255,0.6); font-weight:700;">
+                        <span><i class='bx bx-check-circle'></i> ${children.length}</span>
                         <span>·</span>
                         <span><i class='bx bx-calendar'></i> ${daysCount} يوم</span>
                     </div>
                 </div>
                 <div style="text-align:left; flex-shrink:0;">
-                    <div style="font-size:16px; font-weight:800; font-family:monospace;">${formatCurrency(totalSpend)}</div>
+                    <div style="font-size:16/px; font-weight:800; font-family:monospace;">${formatCurrency(totalSpend)}</div>
                     <div style="font-size:10px; opacity:0.5; text-align:center;">ج.م</div>
                 </div>
                 <i class='bx bx-chevron-down' id="proj-chevron-${project.id}${idSuffix}" style="font-size:18px; opacity:0.5; transition:transform 0.2s;"></i>

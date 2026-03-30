@@ -100,6 +100,17 @@ export function openModal(modalId, parentId = null) {
         const pIdEl = document.getElementById('node-parent-id');
         if(pIdEl) pIdEl.value = parentId || '';
         
+        // Update Title & Button text based on context
+        const titleEl = document.getElementById('addNodeModalTitle');
+        const saveBtn = document.getElementById('node-save-btn');
+        if (parentId) {
+            if(titleEl) titleEl.textContent = 'إضافة تفاصيل';
+            if(saveBtn) saveBtn.textContent = 'حفظ التفاصيل ✍️';
+        } else {
+            if(titleEl) titleEl.textContent = 'تسجيل مصروف';
+            if(saveBtn) saveBtn.textContent = 'حفظ المصروف ✍️';
+        }
+        
         const typeEl = document.getElementById('node-type');
         if(typeEl) typeEl.value = NODE_TYPES.EXPENSE;
         
@@ -173,8 +184,15 @@ export function closeAllModals(fromHistory = false) {
 
 export function openItemActionMenu(e, id, type, parentId = null) {
     if(e) e.stopPropagation();
-    setCurrentActionItem({ id, type, parentId });
     const menu = document.getElementById('itemActionMenu');
+    
+    // Toggle Logic: If clicking the same item while menu is open, close it.
+    if (menu && menu.classList.contains('show') && currentActionItem.id === id) {
+        menu.classList.remove('show');
+        return;
+    }
+
+    setCurrentActionItem({ id, type, parentId });
     if(menu) {
         menu.classList.add('show');
         const btnSub = menu.querySelector('#btn-add-sub-item');
@@ -182,14 +200,37 @@ export function openItemActionMenu(e, id, type, parentId = null) {
             const isContainer = (type === NODE_TYPES.TRIP || type === NODE_TYPES.PROJECT);
             btnSub.innerHTML = isContainer 
                 ? `<i class='bx bx-plus-circle'></i> إضافة مصروف` 
-                : `<i class='bx bx-plus-circle'></i> إضافة تفريعة`;
+                : `<i class='bx bx-plus-circle'></i> إضافة تفاصيل`;
             
             btnSub.style.display = ''; // Always show for supported types
         }
         
         const rect = e.currentTarget.getBoundingClientRect();
-        let top = rect.bottom + window.scrollY;
-        let left = Math.max(0, rect.left + window.scrollX - 100); 
+        
+        // Ensure menu is 'appearing' to get dimensions
+        menu.classList.add('show');
+        const menuWidth = menu.offsetWidth || 140;
+        const menuHeight = menu.offsetHeight || 150;
+        
+        // With position: fixed, 'rect.bottom' and 'rect.top' are already viewport-relative.
+        let top = rect.bottom;
+        
+        // Flip to top if it would overflow the bottom of the viewport
+        const bottomNavOffset = 90; // Increased to ensure menu never touches bottom nav
+        if (rect.bottom + menuHeight + bottomNavOffset > window.innerHeight) {
+            top = rect.top - menuHeight;
+        }
+
+        // In RTL, we ideally want to align the right edge of the menu with the right edge of the button
+        let left = rect.right - menuWidth;
+        
+        // Clamp to viewport edges to prevent off-screen menus
+        const padding = 12;
+        const maxLeft = window.innerWidth - menuWidth - padding;
+        const minLeft = padding;
+        
+        left = Math.max(minLeft, Math.min(maxLeft, left));
+
         menu.style.top = top + 'px';
         menu.style.left = left + 'px';
     }
@@ -225,6 +266,10 @@ export function handleEditItem() {
         
         currentFormLabels.node = node.tags ? [...node.tags] : [];
         openModal('addNodeModal', node.parent_id);
+        
+        // Ensure buttons say Edit when editing
+        const saveBtn = document.getElementById('node-save-btn');
+        if(saveBtn) saveBtn.textContent = 'حفظ التعديلات ✅';
 
     } else if (node.type === NODE_TYPES.TRIP) {
         document.getElementById('trip-edit-id').value = node.id;
@@ -247,7 +292,16 @@ export function handleDeleteItem() {
     const menu = document.getElementById('itemActionMenu');
     if(menu) menu.classList.remove('show');
     const { id } = currentActionItem;
-    if (!confirm("هل أنت متأكد من حذف هذا العنصر؟ (سيتم حذف المفردات الفرعية)")) return;
+    const node = appData.nodes.find(n => n.id === id);
+    if (!node) return;
+
+    const children = getChildrenOf(id);
+    let msg = `هل أنت متأكد من حذف "${node.title}"؟`;
+    if (children.length > 0) {
+        msg += `\n⚠️ تنبيه: هذا العنصر يحتوي على (${children.length}) تفرعات/مصاريف وسيتم حذفها جميعاً!`;
+    }
+    
+    if (!confirm(msg)) return;
     
     Actions.deleteNode(id);
 }
@@ -291,6 +345,24 @@ export function initForms() {
             closeAllModals();
             if(window.updateUI) window.updateUI();
         });
+
+        // Dynamic Placeholder Logic
+        const catSelect = document.getElementById('node-category');
+        const titleInput = document.getElementById('node-title');
+        if (catSelect && titleInput) {
+            catSelect.addEventListener('change', () => {
+                const catId = catSelect.value;
+                const placeholders = {
+                    'c1': 'مثال: غداء، كافيه، عطارة...',
+                    'c2': 'مثال: بنزين، أوبر، ميكروباص...',
+                    'c3': 'مثال: كشف، دواء، تحاليل...',
+                    'c4': 'مثال: فاتورة كهرباء، شحن نت...',
+                    'c5': 'مثال: صيانة غسالة، منظفات...',
+                    'default': 'اكتب اسم المصروف هنا...'
+                };
+                titleInput.placeholder = placeholders[catId] || placeholders['default'];
+            });
+        }
     }
 
     // Trip

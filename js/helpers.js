@@ -3,6 +3,16 @@
 import { appData } from './state.js';
 import { DEFAULT_CATEGORIES } from './constants.js';
 
+/** 
+ * Sanitizes a string to prevent XSS.
+ */
+export function escapeHTML(str) {
+    if (!str || typeof str !== 'string') return str;
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 export function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }

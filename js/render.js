@@ -75,7 +75,13 @@ export function renderDashboard() {
 
     // ── RENDER TODAY ──
     if (todayItems.length === 0) {
-        todayList.innerHTML = `<div class="empty-state" style="padding:40px 20px;"><i class='bx bx-calendar-x' style="font-size:48px; opacity:0.2; margin-bottom:12px;"></i><p>لا توجد مصروفات مسجلة اليوم</p></div>`;
+        const name = appData.userName || "يا صديقي";
+        todayList.innerHTML = `
+            <div class="empty-state" style="padding:40px 20px;">
+                <i class='bx bx-coffee-togo' style="font-size:48px; opacity:0.2; margin-bottom:12px;"></i>
+                <p>يومك سعيد ${name}! <br> لم تسجل أي مصروفات اليوم بعد ☕</p>
+            </div>
+        `;
     } else {
         todayList.innerHTML = `
             <div style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 10px;">
