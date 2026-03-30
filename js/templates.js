@@ -35,6 +35,15 @@ export function generateInnerNodeHTML(item, parentId = null, idSuffix = '', inde
     const catSettings = getCategoryObj(item.category);
     const accordionId = `inner-${item.id}${idSuffix}`;
 
+    let budgetStatusHtml = '';
+    if (hasChildren && item.amount) {
+        if (fin.untracked > 0) {
+            budgetStatusHtml = `<span class="u-badge" style="font-size:9px; background:rgba(34,197,94,0.1); color:#16a34a; padding:1px 4px;"><i class='bx bx-wallet'></i> متبقي: ${formatCurrency(fin.untracked)}</span>`;
+        } else if (fin.untracked < 0) {
+            budgetStatusHtml = `<span class="u-badge u-badge-danger" style="font-size:9px; background:rgba(239,68,68,0.1); color:#dc2626; padding:1px 4px;"><i class='bx bx-trending-up'></i> تجاوز: ${formatCurrency(Math.abs(fin.untracked))}</span>`;
+        }
+    }
+
     return `
         <div class="t-item sub-item-row" style="position:relative; display:flex; align-items:center; padding:10px 12px; margin-bottom:0; border-bottom:1px solid var(--border-color);">
             <button class="item-dots-v2" onclick="openItemActionMenu(event, '${item.id}', '${NODE_TYPES.EXPENSE}', '${parentId || ''}')" style="position:absolute; left:4px; top:50%; transform:translateY(-50%); z-index:10;"><i class='bx bx-dots-vertical-rounded'></i></button>
@@ -60,11 +69,14 @@ export function generateInnerNodeHTML(item, parentId = null, idSuffix = '', inde
                     </div>
 
                     <!-- Left Side: Category Tag + Amount -->
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        ${!isDetail ? `
-                            <span style="font-size:9.5px; font-weight:800; color:${catSettings.color}; background:${catSettings.bg}; padding:2px 7px; border-radius:5px; line-height:1; white-space:nowrap;">${catSettings.name}</span>
-                        ` : ''}
-                        <span class="t-amount minus" style="font-size:13.5px; font-weight:800; font-family:monospace; margin:0; white-space:nowrap;">${formatCurrency(fin.effectiveTotal)} ج.م</span>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            ${!isDetail ? `
+                                <span style="font-size:9.5px; font-weight:800; color:${catSettings.color}; background:${catSettings.bg}; padding:2px 7px; border-radius:5px; line-height:1; white-space:nowrap;">${catSettings.name}</span>
+                            ` : ''}
+                            <span class="t-amount minus" style="font-size:13.5px; font-weight:800; font-family:monospace; margin:0; white-space:nowrap;">${formatCurrency(fin.effectiveTotal)} ج.م</span>
+                        </div>
+                        ${budgetStatusHtml}
                     </div>
                 </div>
             </div>
@@ -72,6 +84,12 @@ export function generateInnerNodeHTML(item, parentId = null, idSuffix = '', inde
         ${hasChildren ? `
             <div id="${accordionId}" class="sub-node-container" style="margin-right:24px; border-right:2px solid ${catSettings.color}; display:none;">
                 ${children.map((ch, idx) => generateInnerNodeHTML(ch, item.id, idSuffix, idx + 1, true)).join('')}
+                ${fin.untracked > 0 ? `
+                    <div class="sub-item-row remainder-row" style="padding:8px 12px; display:flex; justify-content:space-between; align-items:center; background:rgba(var(--primary-rgb), 0.03); border-bottom:1px dashed var(--border-color); opacity:0.8;">
+                       <span style="font-size:12px; font-weight:700; color:var(--text-muted);"><i class='bx bx-dots-horizontal-rounded'></i> متبقي للمصروف</span>
+                       <span style="font-size:12px; font-weight:800; color:var(--success);">${formatCurrency(fin.untracked)} ج.م</span>
+                    </div>
+                ` : ''}
             </div>
         ` : ''}
     `;

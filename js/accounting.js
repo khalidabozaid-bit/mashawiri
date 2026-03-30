@@ -1,7 +1,7 @@
 // js/accounting.js
 import { appData, getNodeById } from './state.js';
 import { NODE_TYPES, NODE_STATUS } from './constants.js';
-import { getChildrenOf } from './tree.js';
+import { getChildrenOf, computeNodeFinancials } from './tree.js';
 
 /**
  * ── THE CORE GROUPING ENGINE ──────────────────────────────────────
@@ -22,7 +22,8 @@ export function getNodesGroupedByDate() {
     const result = [];
 
     sortedDates.forEach(dateStr => {
-        // Find all expenses on this specific day, SORTED by time (Descending)
+        // Find ONLY direct child expenses of a Trip/Project (not nested sub-details)
+        // AND standalone expenses (no parent at all) for this day
         const dayExpenses = appData.nodes
             .filter(n => 
                 n.type === NODE_TYPES.EXPENSE && 
@@ -31,8 +32,6 @@ export function getNodesGroupedByDate() {
             )
             .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
-        const dayTotal = dayExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
-        
         // Group these expenses by their Top-Level Parent (Trip/Project)
         const parentMap = new Map();
         const standalone = [];
@@ -40,6 +39,7 @@ export function getNodesGroupedByDate() {
         dayExpenses.forEach(exp => {
             let current = exp;
             let rootObj = null;
+            let directParentOfRoot = null; // immediate child of the Trip/Project
 
             // Traverse up to find the root parent (Trip or Project only)
             while (current && current.parent_id) {
@@ -47,6 +47,7 @@ export function getNodesGroupedByDate() {
                 if (parent) {
                     if (parent.type === NODE_TYPES.TRIP || parent.type === NODE_TYPES.PROJECT) {
                         rootObj = parent;
+                        directParentOfRoot = current; // 'current' is the direct child of the trip
                         break; 
                     }
                     current = parent;
@@ -54,16 +55,19 @@ export function getNodesGroupedByDate() {
             }
 
             if (rootObj) {
-                // Group under Trip/Project
-                if (!parentMap.has(rootObj.id)) parentMap.set(rootObj.id, []);
-                parentMap.get(rootObj.id).push(exp);
+                // Only add direct children of the Trip/Project to the parentMap
+                // Sub-details (grandchildren) are rendered recursively, so skip them
+                if (exp.id === directParentOfRoot.id) {
+                    if (!parentMap.has(rootObj.id)) parentMap.set(rootObj.id, []);
+                    parentMap.get(rootObj.id).push(exp);
+                }
+                // If exp is a sub-detail (grandchild+), ignore it here — it renders via its parent
             } else if (!exp.parent_id) {
-                // Standalone Expense (Absolute Top Level)
+                // Standalone Expense (Absolute Top Level, no parent)
                 standalone.push(exp);
             }
-            // Note: If exp has a parent but no Trip/Project root, it's a sub-detail 
-            // of a standalone expense. We IGNORE it here because it will be 
-            // rendered recursively within its standalone parent.
+            // Note: If exp has a parent_id that is a standalone expense (not Trip/Project),
+            // it's a sub-detail of a standalone expense and renders recursively.
         });
 
         // Add Trips/Projects that STARTED on this day (even if they have no expenses yet)
@@ -76,6 +80,18 @@ export function getNodesGroupedByDate() {
             }
         });
 
+        // Calculate dayTotal: sum top-level expenses only (standalone + direct children of trips)
+        // We use computeNodeFinancials to ensure sub-details are correctly accounted for
+        let dayTotal = 0;
+        standalone.forEach(s => {
+            dayTotal += computeNodeFinancials(s).effectiveTotal;
+        });
+        parentMap.forEach((children) => {
+            children.forEach(c => {
+                dayTotal += computeNodeFinancials(c).effectiveTotal;
+            });
+        });
+
         // Format the display items for this day
         const items = [];
         standalone.forEach(s => items.push(s));
@@ -86,7 +102,7 @@ export function getNodesGroupedByDate() {
             items.push({ 
                 ...root, 
                 _filteredChildren: children,
-                _dayTotal: children.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
+                _dayTotal: children.reduce((sum, c) => sum + computeNodeFinancials(c).effectiveTotal, 0)
             });
         });
 
@@ -105,14 +121,21 @@ export function getNodesGroupedByDate() {
  */
 export function getMonthlyTotal(month, year) {
     let total = 0;
+    // Count only top-level expenses (no parent, or parent is a Trip/Project)
     appData.nodes.filter(n => 
         n.type === NODE_TYPES.EXPENSE && 
         n.status !== NODE_STATUS.TRASH && 
         n.date
     ).forEach(n => {
+        // Skip sub-details: if parent is also an EXPENSE, it will be reached via its parent node
+        if (n.parent_id) {
+            const parent = getNodeById(n.parent_id);
+            if (parent && parent.type === NODE_TYPES.EXPENSE) return; 
+        }
+        
         const d = new Date(n.date);
         if (d.getMonth() === month && d.getFullYear() === year) {
-            total += parseFloat(n.amount || 0);
+            total += computeNodeFinancials(n).effectiveTotal;
         }
     });
     return total;
