@@ -318,13 +318,6 @@ export function handleDeleteItem() {
     }
 }
 
-export function handleShareItem() {
-    const menu = document.getElementById('itemActionMenu');
-    if(menu) menu.classList.remove('show');
-    const { id } = currentActionItem;
-    if (id) Actions.shareNode(id);
-}
-
 export function handleAddSubItem() {
     const menu = document.getElementById('itemActionMenu');
     if(menu) menu.classList.remove('show');

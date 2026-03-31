@@ -131,50 +131,6 @@ export const Actions = {
         });
     },
 
-    shareNode: async function(nodeId) {
-        const node = appData.nodes.find(n => n.id === nodeId);
-        if (!node) return;
-
-        const { computeNodeFinancials, getChildrenOf } = await import('./tree.js');
-        const { formatCurrency, formatDateTime } = await import('./helpers.js');
-        
-        const fin = computeNodeFinancials(node);
-        const children = getChildrenOf(nodeId);
-        
-        let text = `💰 *ملخص مشاوريري: ${node.title}*\n`;
-        text += `📅 التاريخ: ${formatDateTime(node.date)}\n`;
-        text += `💵 الإجمالي: ${formatCurrency(fin.effectiveTotal)} ج.م\n`;
-        
-        if (children.length > 0) {
-            text += `\n📋 *التفاصيل:*\n`;
-            children.sort((a,b) => new Date(a.date||0) - new Date(b.date||0)).forEach((c, idx) => {
-                const cFin = computeNodeFinancials(c);
-                text += `${idx + 1}. ${c.title}: ${formatCurrency(cFin.effectiveTotal)} ج.م\n`;
-            });
-        }
-        
-        text += `\n✨ _تمت المشاركة من تطبيق مشاوريري_ 💎`;
-
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: `ملخص: ${node.title}`,
-                    text: text
-                });
-            } catch (err) {
-                console.error("Share failed", err);
-            }
-        } else {
-            // Fallback: Copy to clipboard
-            try {
-                await navigator.clipboard.writeText(text);
-                if (window.showToast) window.showToast('تم نسخ الملخص للحافظة! يمكنك لصقه في واتساب.', 'success');
-            } catch (err) {
-                console.error("Copy failed", err);
-            }
-        }
-    },
-
     factoryReset: async function() {
         const legacyKeys = [CONFIG.storageKey, STORAGE_KEY_V5, STORAGE_KEY_V4, 'mashawiri_data', 'app_data'];
         legacyKeys.forEach(k => localStorage.removeItem(k));

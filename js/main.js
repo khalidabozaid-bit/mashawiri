@@ -277,6 +277,7 @@ export function toggleAdvancedSettings(e) {
 }
 
 let swRegistration = null;
+let updateConfirmed = false; // Flag for two-click confirmation
 
 // The "Professional" Update Bridge
 export async function handleUpdateApp() {
@@ -285,6 +286,21 @@ export async function handleUpdateApp() {
     
     // If we have a waiting SW, tell it to take over
     if (swRegistration && swRegistration.waiting) {
+        if (!updateConfirmed) {
+            // First click
+            updateConfirmed = true;
+            if(statusText) {
+                statusText.textContent = "يوجد تحديث .. حدث الآن";
+                statusText.style.color = "var(--primary)";
+            }
+            if(icon) {
+                icon.className = 'bx bx-cloud-download bx-tada';
+                icon.style.color = "var(--primary)";
+            }
+            return;
+        }
+
+        // Second click
         if(statusText) statusText.textContent = "جاري تفعيل النسخة الجديدة...";
         if(icon) icon.className = 'bx bx-sync bx-spin';
         
@@ -294,6 +310,9 @@ export async function handleUpdateApp() {
 
     // Force a check if no update was automatically found yet
     if(swRegistration) {
+        // Reset confirmation state when checking manually
+        updateConfirmed = false; 
+
         if(statusText) statusText.textContent = "جاري فحص الإصدار...";
         if(icon) icon.className = 'bx bx-search-alt bx-tada';
         
@@ -301,8 +320,14 @@ export async function handleUpdateApp() {
             const reg = await swRegistration.update();
             if(!reg.waiting && !reg.installing) {
                 setTimeout(() => {
-                    if(statusText) statusText.textContent = `التطبيق محدث (${CONFIG.version})`;
-                    if(icon) icon.className = 'bx bx-sync';
+                    if(statusText) {
+                        statusText.textContent = `التطبيق محدث (${CONFIG.version})`;
+                        statusText.style.color = "";
+                    }
+                    if(icon) {
+                        icon.className = 'bx bx-sync';
+                        icon.style.color = "";
+                    }
                 }, 1000);
             }
         } catch(e) {
