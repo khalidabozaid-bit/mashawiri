@@ -216,17 +216,22 @@ export function generateTripHTML(item, idSuffix = '', isPartial = false) {
  */
 export function generateProjectHTML(project, isCompleted = false, idSuffix = '', isPartial = false) {
     const children = isPartial ? (project._filteredChildren || []) : getChildrenOf(project.id);
+    const fin = computeNodeFinancials(project); 
+    
+    // For projects, we want to show today's spend contextually
     const localToday = new Date();
     const todayStr = `${localToday.getFullYear()}-${String(localToday.getMonth()+1).padStart(2,'0')}-${String(localToday.getDate()).padStart(2,'0')}`;
 
-    let todaySpend = 0, otherSpend = 0;
+    let todaySpend = 0;
     children.forEach(c => {
-        const amt = parseFloat(c.amount || 0);
         const d = (c.date || '').split('T')[0];
-        if (d === todayStr) todaySpend += amt;
-        else otherSpend += amt;
+        if (d === todayStr) {
+            todaySpend += computeNodeFinancials(c).effectiveTotal;
+        }
     });
-    const totalSpend = isPartial ? (project._dayTotal || 0) : (todaySpend + otherSpend);
+
+    const totalSpend = isPartial ? (project._dayTotal || 0) : fin.effectiveTotal;
+    const otherSpend = totalSpend - todaySpend;
     const uniqueDates = new Set(children.map(c => (c.date||'').split('T')[0]).filter(Boolean));
     const daysCount = uniqueDates.size;
 
@@ -239,7 +244,7 @@ export function generateProjectHTML(project, isCompleted = false, idSuffix = '',
 
     let childrenHtml = '';
     Object.keys(grouped).sort().forEach(dateKey => {
-        const dayTotal = grouped[dateKey].reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+        const dayTotal = grouped[dateKey].reduce((s, c) => s + computeNodeFinancials(c).effectiveTotal, 0);
         const isToday = dateKey === todayStr;
         childrenHtml += `
             <div class="u-flex-center" style="margin:12px 0 8px 0; justify-content:center;">

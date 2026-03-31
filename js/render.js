@@ -56,7 +56,7 @@ export function renderDashboard() {
                         const partialItem = {
                             ...item,
                             _filteredChildren: childrenToday,
-                            _dayTotal: childrenToday.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
+                            _dayTotal: childrenToday.reduce((sum, c) => sum + computeNodeFinancials(c).effectiveTotal, 0)
                         };
                         if (item.type === NODE_TYPES.TRIP) return generateTripHTML(partialItem, '-ong', true);
                         return generateProjectHTML(partialItem, false, '-ong', true);

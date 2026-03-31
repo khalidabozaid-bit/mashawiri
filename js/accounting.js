@@ -121,18 +121,18 @@ export function getNodesGroupedByDate() {
  */
 export function getMonthlyTotal(month, year) {
     let total = 0;
-    // Count only top-level expenses (no parent, or parent is a Trip/Project)
     appData.nodes.filter(n => 
         n.type === NODE_TYPES.EXPENSE && 
         n.status !== NODE_STATUS.TRASH && 
         n.date
     ).forEach(n => {
-        // Skip sub-details: if parent is also an EXPENSE, it will be reached via its parent node
+        // Rule: Only count root expenses or direct children of Trips/Projects
+        // If a node's parent is also an EXPENSE, skip it here (it's counted via its parent)
         if (n.parent_id) {
             const parent = getNodeById(n.parent_id);
-            if (parent && parent.type === NODE_TYPES.EXPENSE) return; 
+            if (parent && parent.type === NODE_TYPES.EXPENSE) return;
         }
-        
+
         const d = new Date(n.date);
         if (d.getMonth() === month && d.getFullYear() === year) {
             total += computeNodeFinancials(n).effectiveTotal;
