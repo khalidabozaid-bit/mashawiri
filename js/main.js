@@ -285,7 +285,7 @@ export async function handleUpdateApp() {
             const reg = await swRegistration.update();
             if(!reg.waiting && !reg.installing) {
                 setTimeout(() => {
-                    if(statusText) statusText.textContent = "التطبيق محدث (v4.5)";
+                    if(statusText) statusText.textContent = `التطبيق محدث (${CONFIG.version})`;
                     if(icon) icon.className = 'bx bx-sync';
                 }, 1000);
             }
@@ -505,6 +505,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.updateUI();
         console.log("Mashawiri: Initial UI render complete.");
     }
+
+    // Set initial version from config
+    const versionText = document.getElementById('update-status-text');
+    if(versionText) versionText.textContent = `التطبيق محدث (${CONFIG.version})`;
 });
 
 // Toast Notification System (Global)
