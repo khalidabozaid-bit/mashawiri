@@ -296,14 +296,33 @@ export function handleDeleteItem() {
     if (!node) return;
 
     const children = getChildrenOf(id);
-    let msg = `هل أنت متأكد من حذف "${node.title}"؟`;
+    let msg = `هل أنت متأكد من نقل "${node.title}" إلى السلة؟`;
     if (children.length > 0) {
-        msg += `\n⚠️ تنبيه: هذا العنصر يحتوي على (${children.length}) تفرعات/مصاريف وسيتم حذفها جميعاً!`;
+        msg += `\n⚠️ سيتم نقل (${children.length}) مصاريف تابعة معه.`;
     }
     
     if (!confirm(msg)) return;
     
     Actions.deleteNode(id);
+    if(window.updateUI) window.updateUI();
+
+    if (window.showToast) {
+        window.showToast(`تم نقل "${node.title}" إلى السلة`, 'success', {
+            label: 'تراجع؟',
+            callback: () => {
+                Actions.restoreNode(id);
+                if(window.updateUI) window.updateUI();
+                window.showToast('تمت استعادة العنصر بنجاح', 'success');
+            }
+        });
+    }
+}
+
+export function handleShareItem() {
+    const menu = document.getElementById('itemActionMenu');
+    if(menu) menu.classList.remove('show');
+    const { id } = currentActionItem;
+    if (id) Actions.shareNode(id);
 }
 
 export function handleAddSubItem() {

@@ -110,8 +110,24 @@ window.archiveProjectHandler = (id) => {
     Actions.completeNode(id);
 };
 window.deleteProjectHandler = (id) => {
-    if (!confirm('⚠️ هل أنت متأكد من الحذف؟ سيُحذف البند وكل مصروفاته.')) return;
+    const node = appData.nodes.find(n => n.id === id);
+    if (!node) return;
+    
+    if (!confirm(`⚠️ هل أنت متأكد من نقل "${node.title}" إلى السلة؟`)) return;
+    
     Actions.deleteNode(id);
+    if(window.updateUI) window.updateUI();
+
+    if (window.showToast) {
+        window.showToast(`تم نقل "${node.title}" إلى السلة`, 'success', {
+            label: 'تراجع؟',
+            callback: () => {
+                Actions.restoreNode(id);
+                if(window.updateUI) window.updateUI();
+                window.showToast('تمت استعادة المشوار/المشروع بنجاح', 'success');
+            }
+        });
+    }
 };
 window.deleteTodayExpensesHandler = () => {
     const localToday = new Date();
@@ -512,7 +528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Toast Notification System (Global)
-export function showToast(message, type = 'info') {
+export function showToast(message, type = 'info', action = null) {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
@@ -525,20 +541,40 @@ export function showToast(message, type = 'info') {
         info: 'bx-info-circle'
     };
 
+    let actionHtml = '';
+    if (action && action.label && action.callback) {
+        const actionId = `toast-action-${Math.random().toString(36).substr(2, 9)}`;
+        actionHtml = `<button id="${actionId}" style="margin-right:auto; margin-left: -5px; background:var(--primary); color:white; border:none; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap;">${action.label}</button>`;
+        
+        // Use a small delay to attach listener because toast isn't in DOM yet
+        setTimeout(() => {
+            const btn = document.getElementById(actionId);
+            if (btn) btn.onclick = () => {
+                action.callback();
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 400); 
+            };
+        }, 10);
+    }
+
     toast.innerHTML = `
         <i class='bx ${icons[type] || icons.info}'></i>
-        <span>${message}</span>
+        <span style="flex:1;">${message}</span>
+        ${actionHtml}
     `;
 
     container.appendChild(toast);
 
-    // Auto remove after 3.5 seconds
+    // Auto remove after 4.5 seconds (slightly longer if there is an action)
+    const duration = action ? 5000 : 3500;
     setTimeout(() => {
-        toast.classList.add('fade-out');
-        toast.addEventListener('animationend', () => {
-            toast.remove();
-        });
-    }, 3500);
+        if (toast.parentElement) {
+            toast.classList.add('fade-out');
+            toast.addEventListener('animationend', () => {
+                toast.remove();
+            });
+        }
+    }, duration);
 }
 window.showToast = showToast;
 
