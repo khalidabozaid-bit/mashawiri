@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v4.7.1-2026-03-31T13:38'; // Timestamp to trigger 'two-click' update logic
+const CACHE_VERSION = 'v4.7.2-2026-03-31T13:41'; // Flush all caches to remove 4.8 remnants
 const CACHE_NAME = 'mashawiri-' + CACHE_VERSION;
 const ASSETS = [
   './',
