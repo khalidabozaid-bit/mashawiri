@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const statusText = document.getElementById('update-status-text');
                         const icon = document.getElementById('update-icon');
                         if(statusText) {
-                            statusText.textContent = "تحديث جديد متاح! اضغط هنا";
+                            statusText.textContent = "تحديث جديد متاح اضغط هنا";
                             statusText.classList.add('update-available-pulse');
                         }
                         if(icon) {
