@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v4.4-2026-03-31T11:58'; // Timestamp for cache busting
+const CACHE_VERSION = 'v4.5-2026-03-31T12:26'; // Timestamp for cache busting
 const CACHE_NAME = 'mashawiri-' + CACHE_VERSION;
 const ASSETS = [
   './',
