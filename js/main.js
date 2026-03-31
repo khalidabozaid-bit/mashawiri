@@ -9,6 +9,18 @@ window.onunhandledrejection = (event) => {
     console.error(`[Mashawiri Promise Error] ${event.reason}`);
 };
 
+// --- PWA Custom Install Logic ---
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    // Update UI notify the user they can install the PWA
+    const installBtn = document.getElementById('btn-install-app');
+    if (installBtn) installBtn.style.display = 'flex';
+});
+
 // --- PWA Service Worker Registration ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -425,6 +437,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             switchView(targetId);
         });
     });
+
+    // PWA Install Logic
+    const installBtn = document.getElementById('btn-install-app');
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            // Hide the app provided install promotion
+            installBtn.style.display = 'none';
+            // Show the install prompt
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            // We've used the prompt, and can't use it again until another beforeinstallprompt event fires
+            deferredPrompt = null;
+        });
+    }
 
     document.addEventListener('change', (e) => {
         if (e.target.classList.contains('dynamic-category-select')) {
