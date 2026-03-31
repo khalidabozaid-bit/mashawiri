@@ -247,29 +247,37 @@ export function toggleAdvancedSettings(e) {
 }
 
 let swRegistration = null;
+
+// The "Professional" Update Bridge
 export async function handleUpdateApp() {
     const statusText = document.getElementById('update-status-text');
     const icon = document.getElementById('update-icon');
     
+    // If we have a waiting SW, tell it to take over
     if (swRegistration && swRegistration.waiting) {
-        // Send skipWaiting to the waiting SW
+        if(statusText) statusText.textContent = "جاري تفعيل النسخة الجديدة...";
+        if(icon) icon.className = 'bx bx-sync bx-spin';
+        
         swRegistration.waiting.postMessage({ action: 'skipWaiting' });
-        if(statusText) statusText.textContent = "جاري التحديث...";
         return;
     }
 
-    // Manual check
+    // Force a check if no update was automatically found yet
     if(swRegistration) {
-        if(statusText) statusText.textContent = "جاري الفحص...";
+        if(statusText) statusText.textContent = "جاري فحص الإصدار...";
+        if(icon) icon.className = 'bx bx-search-alt bx-tada';
+        
         try {
-            await swRegistration.update();
-            setTimeout(() => {
-                if(!swRegistration.waiting && statusText) {
-                    statusText.textContent = "التطبيق محدث (v3.0)";
-                }
-            }, 1500);
+            const reg = await swRegistration.update();
+            if(!reg.waiting && !reg.installing) {
+                setTimeout(() => {
+                    if(statusText) statusText.textContent = "التطبيق محدث (v4.1)";
+                    if(icon) icon.className = 'bx bx-sync';
+                }, 1000);
+            }
         } catch(e) {
-            if(statusText) statusText.textContent = "فشل الفحص";
+            console.error("Manual update check failed:", e);
+            if(statusText) statusText.textContent = "فشل الفحص (أوفلاين؟)";
         }
     }
 }

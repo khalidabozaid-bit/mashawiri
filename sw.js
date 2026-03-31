@@ -1,4 +1,5 @@
-const CACHE_NAME = 'mashawiri-v4';
+const CACHE_VERSION = 'v4.1-2026-03-31T11:09'; // Timestamp for cache busting
+const CACHE_NAME = 'mashawiri-' + CACHE_VERSION;
 const ASSETS = [
   './',
   './index.html',

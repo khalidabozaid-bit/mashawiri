@@ -51,6 +51,19 @@
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
         #save-indicator.show { display: block; animation: fadeInUp 0.4s ease; }
+
+        /* Animation for update notification */
+        .update-available-pulse {
+            animation: updatePulse 2s infinite;
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        @keyframes updatePulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -82,7 +95,7 @@
                 <!-- Dynamic Update Button -->
                 <button class="dropdown-item" id="btn-update-app" onclick="handleUpdateApp()">
                     <i class='bx bx-sync' id="update-icon"></i> 
-                    <span id="update-status-text">التطبيق محدث (v3.0)</span>
+                    <span id="update-status-text">التطبيق محدث (v4.1)</span>
                 </button>
 
                 <div class="u-sep"></div>
