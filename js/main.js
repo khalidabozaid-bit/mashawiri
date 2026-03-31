@@ -285,7 +285,7 @@ export async function handleUpdateApp() {
             const reg = await swRegistration.update();
             if(!reg.waiting && !reg.installing) {
                 setTimeout(() => {
-                    if(statusText) statusText.textContent = "التطبيق محدث (v4.1)";
+                    if(statusText) statusText.textContent = "التطبيق محدث (v4.5)";
                     if(icon) icon.className = 'bx bx-sync';
                 }, 1000);
             }
