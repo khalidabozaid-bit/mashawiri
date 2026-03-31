@@ -1,7 +1,9 @@
 // --- Resilience & Error Handling ---
 window.onerror = (msg, url, line, col, error) => {
     console.error(`[Mashawiri Error] ${msg} at ${line}:${col}`);
-    // Optional: Add UI toast here if critical
+    if (window.showToast) {
+        window.showToast("حدث خطأ تقني بسيط، جاري معالجة الأمر في الخلفية.", "error");
+    }
     return false;
 };
 
@@ -504,5 +506,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log("Mashawiri: Initial UI render complete.");
     }
 });
+
+// Toast Notification System (Global)
+export function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = {
+        success: 'bx-check-circle',
+        error: 'bx-error-circle',
+        info: 'bx-info-circle'
+    };
+
+    toast.innerHTML = `
+        <i class='bx ${icons[type] || icons.info}'></i>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto remove after 3.5 seconds
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+        });
+    }, 3500);
+}
+window.showToast = showToast;
 
 // End of file window attachments (Already moved to top)
