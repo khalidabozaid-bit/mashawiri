@@ -66,7 +66,7 @@ import { Actions } from './actions.js';
 import { updateUI } from './render.js';
 import { initForms, closeAllModals, openModal } from './forms.js';
 import { handleSearch } from './filters.js';
-import { CONFIG } from './config.js';
+import { CONFIG } from './config.js?v=4.7.2';
 import { getTrashedNodes, getCompletedNodes } from './tree.js';
 import './ui_core.js';
 import './filters.js';
