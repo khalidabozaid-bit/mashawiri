@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v4.7-2026-03-31T12:42'; // Timestamp for cache busting
+const CACHE_VERSION = 'v4.7.1-2026-03-31T13:38'; // Timestamp to trigger 'two-click' update logic
 const CACHE_NAME = 'mashawiri-' + CACHE_VERSION;
 const ASSETS = [
   './',

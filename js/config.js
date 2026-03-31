@@ -1,7 +1,7 @@
 // js/config.js
 
 export const CONFIG = {
-    version: "v4.7",
+    version: "v4.7.1",
     storageKey: "mashawiri_app_data",
 
     features: {
