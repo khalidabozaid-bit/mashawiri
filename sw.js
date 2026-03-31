@@ -1,8 +1,9 @@
-const CACHE_VERSION = 'v4.1-2026-03-31T11:09'; // Timestamp for cache busting
+const CACHE_VERSION = 'v4.2-2026-03-31T11:48'; // Timestamp for cache busting
 const CACHE_NAME = 'mashawiri-' + CACHE_VERSION;
 const ASSETS = [
   './',
   './index.html',
+  './offline.html',
   './style.css',
   './animations.css',
   './icon.png',
@@ -47,9 +48,19 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Navigation strategy: Network-First, then Offline Fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('./offline.html');
+      })
+    );
+    return;
+  }
+
+  // Assets strategy: Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // Stale-While-Revalidate Strategy
       const fetchPromise = fetch(event.request).then((networkResponse) => {
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, networkResponse.clone());
